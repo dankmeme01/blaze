@@ -15,7 +15,7 @@ public:
     void queueForCache(const std::filesystem::path& path, std::vector<uint8_t>&& data);
     std::filesystem::path getCacheDir();
     std::filesystem::path cacheFileForChecksum(uint32_t crc);
-    uint8_t* readFile(const char* path, size_t& outSize);
+    std::unique_ptr<uint8_t[]> readFile(const char* path, size_t& outSize);
 
 
 private:

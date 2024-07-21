@@ -67,7 +67,7 @@ void LoadManager::queueForCache(const std::filesystem::path& path, std::vector<u
     converterQueue.push(std::make_pair(path, std::move(data)));
 }
 
-uint8_t* LoadManager::readFile(const char* path, size_t& outSize) {
+std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSize) {
     unsigned long s;
 
     GEODE_ANDROID(auto lock = zipFileMutex.lock());
@@ -75,7 +75,7 @@ uint8_t* LoadManager::readFile(const char* path, size_t& outSize) {
     auto buf = CCFileUtils::get()->getFileData(path, "rb", &s);
     outSize = s;
 
-    return buf;
+    return std::unique_ptr<uint8_t[]>(buf);
 }
 
 void LoadManager::threadFunc(decltype(converterThread)::StopToken& st) {

@@ -26,9 +26,7 @@ class $modify(CCImage) {
     bool initWithImageFileCommon(uint8_t* buffer, size_t size, EImageFormat format, const char* path) {
         // if not png, just do the default impl of this func
         if (format != CCImage::EImageFormat::kFmtPng && !std::string_view(path).ends_with(".png")) {
-            bool ret = CCImage::initWithImageData(buffer, size);
-            delete[] buffer;
-            return ret;
+            return CCImage::initWithImageData(buffer, size);
         }
 
         auto res = this->ext()->initWithSPNGOrCache(buffer, size, path);
@@ -47,25 +45,15 @@ class $modify(CCImage) {
         auto buffer = LoadManager::get().readFile(path, size);
 
         if (!buffer || size == 0) {
-            delete[] buffer;
             return false;
         }
 
-        return this->initWithImageFileCommon(buffer, size, format, path);
+        return this->initWithImageFileCommon(buffer.get(), size, format, path);
     }
 
     $override
-    bool initWithImageFileThreadSafe(const char* path, EImageFormat imageType) {
-        size_t size = 0;
-
-        auto buffer = LoadManager::get().readFile(path, size);
-
-        if (!buffer || size == 0) {
-            delete[] buffer;
-            return false;
-        }
-
-        return this->initWithImageFileCommon(buffer, size, imageType, path);
+    bool initWithImageFileThreadSafe(const char* path, EImageFormat format) {
+        return this->initWithImageFile(path, format); // who cares about thread safety?
     }
 
     $override

@@ -58,8 +58,7 @@ static std::optional<MTTextureInitTask> asyncLoadImage(const char* sheet, const 
     }
 
     auto img = new CCImage();
-    auto ret = static_cast<blaze::CCImageExt*>(img)->initWithSPNGOrCache(data, dataSize, pathKey.c_str());
-    delete[] data;
+    auto ret = static_cast<blaze::CCImageExt*>(img)->initWithSPNGOrCache(data.get(), dataSize, pathKey.c_str());
 
     if (!ret) {
         img->release();
