@@ -1,5 +1,7 @@
 #include "alpha.hpp"
 
+#include <tracing.hpp>
+
 #define RGB_PREMULTIPLY_ALPHA(r, g, b, a) \
     (((uint32_t)((r) * (a) / 255) << 0) | \
      ((uint32_t)((g) * (a) / 255) << 8) | \
@@ -12,6 +14,8 @@ namespace blaze {
     }
 
     void premultiplyAlpha(void* dest, const void* source, size_t imageSize) {
+        ZoneScoped;
+
         size_t iters = imageSize / sizeof(uint32_t);
 
         for (size_t i = 0; i < iters; i++) {

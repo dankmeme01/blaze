@@ -36,3 +36,7 @@ std::string formatDuration(const std::chrono::duration<Rep, Period>& time) {
         return std::to_string(micros) + "μs";
     }
 }
+
+inline std::chrono::nanoseconds benchTimer() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
+}

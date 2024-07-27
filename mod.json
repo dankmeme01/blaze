@@ -1,5 +1,5 @@
 {
-	"geode": "3.2.0",
+	"geode": "3.3.0",
 	"gd": {
 		"win": "2.206",
 		"android": "2.206",
@@ -10,6 +10,6 @@
 	"name": "Blaze",
 	"version": "v1.0.0",
 	"developer": "dankmeme",
-	"description": "",
+	"description": "Optimization mod",
 	"early-load": true
 }

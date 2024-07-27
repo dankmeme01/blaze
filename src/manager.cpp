@@ -2,6 +2,7 @@
 
 #include <crc32.hpp>
 #include <formats.hpp>
+#include <tracing.hpp>
 
 using namespace geode::prelude;
 
@@ -36,6 +37,8 @@ std::filesystem::path LoadManager::cacheFileForChecksum(uint32_t checksum) {
 }
 
 bool LoadManager::reallocFromCache(uint32_t checksum, uint8_t*& outbuf, size_t& outsize) {
+    ZoneScoped;
+
     auto filep = this->cacheFileForChecksum(checksum);
 
     std::ifstream file(filep, std::ios::in | std::ios::binary);
@@ -68,6 +71,8 @@ void LoadManager::queueForCache(const std::filesystem::path& path, std::vector<u
 }
 
 std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSize) {
+    ZoneScoped;
+
     unsigned long s;
 
     GEODE_ANDROID(auto lock = zipFileMutex.lock());

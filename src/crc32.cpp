@@ -7,6 +7,8 @@
 # include <arm_neon.h>
 #endif
 
+#include <tracing.hpp>
+
 // Note: the crc32 algorithms in this file may produce different results (due to different polynomials),
 // that's OK. we only need them to be consistent on the same device.
 
@@ -69,6 +71,8 @@ namespace blaze {
 
 	// picks the best crc32 algorithm at runtime
     uint32_t crc32(const uint8_t* bytes, size_t len, uint32_t initial) {
+		ZoneScoped;
+
 #ifdef ASP_IS_X86
         if (asp::simd::getFeatures().sse4_2) return crc32hw(bytes, len, initial);
         return crc32slow(bytes, len, initial);

@@ -1,3 +1,10 @@
+// Blaze CCImage hooks.
+//
+// Intercepts `initWithImageFile` and `initWithImageFileThreadSafe` to use an image cache and use the SPNG decoder.
+// Intercepts `_initWithPngData` to use the SPNG decoder.
+//
+// All images are cached, even ones from other mods.
+
 #include <Geode/Geode.hpp>
 #include <Geode/modify/CCImage.hpp>
 

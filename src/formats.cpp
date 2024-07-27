@@ -3,12 +3,15 @@
 #include <spng.h>
 #include <fpng.h>
 #include <alpha.hpp>
+#include <tracing.hpp>
 
 using namespace geode::prelude;
 
 namespace blaze {
 
 Result<boost::container::vector<uint8_t>> encodeFPNG(const uint8_t* data, size_t size, uint32_t width, uint32_t height) {
+    ZoneScoped;
+
     boost::container::vector<uint8_t> out;
 
     size_t channels = size / (width * height);
@@ -32,6 +35,8 @@ Result<boost::container::vector<uint8_t>> encodeFPNG(const uint8_t* data, size_t
 }
 
 Result<DecodedImage> decodeSPNG(const uint8_t* data, size_t size) {
+    ZoneScoped;
+
     DecodedImage image;
 
     spng_ctx* ctx = spng_ctx_new(0);
@@ -64,6 +69,8 @@ Result<DecodedImage> decodeSPNG(const uint8_t* data, size_t size) {
 }
 
 Result<DecodedImage> decodeFPNG(const uint8_t* data, size_t size) {
+    ZoneScoped;
+
     DecodedImage image;
 
     uint32_t channels;

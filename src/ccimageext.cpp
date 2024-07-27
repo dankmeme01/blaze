@@ -7,6 +7,7 @@
 #include <manager.hpp>
 #include <alpha.hpp>
 #include <crc32.hpp>
+#include <tracing.hpp>
 
 using namespace geode::prelude;
 
@@ -30,6 +31,8 @@ void CCImageExt::setImageProperties(uint32_t width, uint32_t height, uint32_t bi
 }
 
 void CCImageExt::initWithDecodedImage(DecodedImage& img) {
+    ZoneScoped;
+
     m_nWidth = img.width;
     m_nHeight = img.height;
     m_bHasAlpha = img.channels == 4;
@@ -59,6 +62,8 @@ Result<> CCImageExt::initWithFPNG(void* data, size_t size) {
 }
 
 Result<> CCImageExt::initWithSPNGOrCache(uint8_t* buffer, size_t size, const char* imgPath) {
+    ZoneScoped;
+
     // check if we have cached it already
     auto checksum = blaze::crc32(buffer, size);
     uint8_t* cachedBuf = nullptr;

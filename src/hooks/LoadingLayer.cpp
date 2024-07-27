@@ -1,9 +1,14 @@
+// Blaze LoadingLayer hooks.
+//
+// Completely rewrites `LoadingLayer::loadAssets` to be multi-threaded.
+
 #include <Geode/Geode.hpp>
 
 #include <asp/sync/Mutex.hpp>
 #include <asp/thread/ThreadPool.hpp>
 #include <manager.hpp>
 #include <ccimageext.hpp>
+#include <tracing.hpp>
 
 using namespace geode::prelude;
 
@@ -36,6 +41,8 @@ static asp::Mutex<> texCacheMutex;
 static asp::Mutex<> sfcacheMutex;
 
 static std::optional<MTTextureInitTask> asyncLoadImage(const char* sheet, const char* plistToLoad) {
+    ZoneScoped;
+
     auto pathKey = CCFileUtils::get()->fullPathForFilename(sheet, false);
     if (pathKey.empty()) {
         log::warn("Failed to find: {}", sheet);
@@ -78,30 +85,43 @@ static std::optional<MTTextureInitTask> asyncLoadImage(const char* sheet, const 
 }
 
 static void asyncAddSpriteFrames(const char* fullPlistGuess, const char* plist, CCTexture2D* texture, const std::string& sheetName) {
-    GEODE_ANDROID(auto _zlck = LoadManager::get().zipFileMutex.lock());
-    CCDictionary* dict = CCDictionary::createWithContentsOfFileThreadSafe(fullPlistGuess);
+    ZoneScoped;
 
-    if (!dict) {
-        dict = CCDictionary::createWithContentsOfFileThreadSafe(CCFileUtils::get()->fullPathForFilename(plist, false).c_str());
+    CCDictionary* dict;
+
+    {
+        ZoneScopedN("asyndAddSpriteFrames ccdict");
+
+        GEODE_ANDROID(auto _zlck = LoadManager::get().zipFileMutex.lock());
+        dict = CCDictionary::createWithContentsOfFileThreadSafe(fullPlistGuess);
+
+        if (!dict) {
+            dict = CCDictionary::createWithContentsOfFileThreadSafe(CCFileUtils::get()->fullPathForFilename(plist, false).c_str());
+        }
+
+        GEODE_ANDROID(_zlck.unlock());
+
+        if (!dict) {
+            log::warn("failed to find the plist for {}", plist);
+            auto _mtx = texCacheMutex.lock();
+            CCTextureCache::get()->m_pTextures->removeObjectForKey(sheetName);
+            return;
+        }
     }
 
-    GEODE_ANDROID(_zlck.unlock());
-
-    if (!dict) {
-        log::warn("failed to find the plist for {}", plist);
-        auto _mtx = texCacheMutex.lock();
-        CCTextureCache::get()->m_pTextures->removeObjectForKey(sheetName);
-        return;
+    {
+        ZoneScopedN("asyncAddSpriteFrames addSpriteFrames");
+        auto _lastlck = sfcacheMutex.lock();
+        _addSpriteFramesWithDictionary(dict, texture);
+        _lastlck.unlock();
     }
-
-    auto _lastlck = sfcacheMutex.lock();
-    _addSpriteFramesWithDictionary(dict, texture);
-    _lastlck.unlock();
 
     dict->release();
 }
 
 static void loadFont(const char* name) {
+    ZoneScoped;
+
     CCLabelBMFont::create(" ", name);
 }
 
@@ -113,7 +133,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     };
 
     static void onModify(auto& self) {
-        (void) self.setHookPriority("LoadingLayer::loadAssets", 999999999); // so we are only invoked once geode calls us
+        (void) self.setHookPriority("LoadingLayer::loadAssets", 999999999).unwrap(); // so we are only invoked once geode calls us
     }
 
     // this will eventually get called by geode
@@ -128,6 +148,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     }
 
     void customLoadStep() {
+        ZoneScoped;
+
         auto startTime = std::chrono::high_resolution_clock::now();
 
         auto tcache = CCTextureCache::get();
@@ -184,6 +206,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         MAKE_LOADIMG("gravityLine_001");
 
         MAKE_LOADCUSTOM({
+            ZoneScopedN("ObjectToolbox::sharedState");
+
             ObjectToolbox::sharedState();
         });
 
@@ -243,6 +267,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         }
 
         while (true) {
+            ZoneScopedN("tasks");
+
             if (mainThreadQueue.empty()) {
                 if (m_fields->threadPool.isDoingWork()) {
                     std::this_thread::yield();
@@ -255,6 +281,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             auto thing = mainThreadQueue.popNow();
             std::visit(makeVisitor {
                 [&](const MTTextureInitTask& task) {
+                    ZoneScopedN("texture init task");
+
                     auto texture = new CCTexture2D();
                     if (!texture->initWithImage(task.img)) {
                         delete texture;

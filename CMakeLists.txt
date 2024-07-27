@@ -6,6 +6,8 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 project(blaze VERSION 1.0.0)
 
+option(BLAZE_USE_TRACY "Use tracy" OFF)
+
 # source files
 file(GLOB_RECURSE SOURCES
 	src/*.cpp
@@ -40,6 +42,23 @@ CPMAddPackage(
     OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_INCLUDE_LIBRARIES container" # escape with \\\;
 )
 
-add_compile_options("-Wno-incompatible-pointer-types")
+if (BLAZE_USE_TRACY)
+    # taken from https://github.com/cgytrus/AlgebraDash/blob/main/CMakeLists.txt
+    set(TRACY_ENABLE ON CACHE BOOL "" FORCE)
+    set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)
+
+    set(TRACY_ONLY_LOCALHOST OFF CACHE BOOL "" FORCE)
+
+    set(TRACY_NO_CALLSTACK OFF CACHE BOOL "" FORCE)
+    set(TRACY_CALLSTACK OFF CACHE BOOL "" FORCE)
+
+    CPMAddPackage("gh:dankmeme01/tracy#95a3b94")
+    target_include_directories(${PROJECT_NAME} PRIVATE ${Tracy_SOURCE_DIR}/public/tracy)
+    target_link_libraries(${PROJECT_NAME} Tracy::TracyClient)
+
+    target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_TRACY=1)
+
+    add_compile_options("-Wno-incompatible-pointer-types")
+endif()
 
 target_link_libraries(${PROJECT_NAME} asp Boost::container)
