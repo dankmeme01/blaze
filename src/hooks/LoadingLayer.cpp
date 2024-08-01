@@ -134,6 +134,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
     static void onModify(auto& self) {
         (void) self.setHookPriority("LoadingLayer::loadAssets", 999999999).unwrap(); // so we are only invoked once geode calls us
+        BLAZE_HOOK_VERY_LAST(LoadingLayer::init); // idk geode was crashin without this
     }
 
     // this will eventually get called by geode
@@ -329,5 +330,132 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     void finishLoading() {
         m_fields->finishedLoading = true;
         this->loadAssets();
+    }
+
+    // init reimpl
+    bool init(bool fromReload) {
+        if (!CCLayer::init()) return false;
+
+        auto time1 = benchTimer();
+
+        this->m_fromRefresh = fromReload;
+        CCDirector::get()->m_bDisplayStats = true;
+        CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
+
+        if (!fromReload) {
+            FMODAudioEngine::get()->setup();
+        }
+
+        auto time2 = benchTimer();
+
+        auto* gm = GameManager::get();
+        if (gm->m_switchModes) {
+            gm->m_switchModes = false;
+            GameLevelManager::get()->getLevelSaveData();
+        }
+
+        auto time3 = benchTimer();
+
+        auto* tcache = CCTextureCache::get();
+        tcache->addImage("GJ_LaunchSheet.png", false);
+        auto* sfcache = CCSpriteFrameCache::get();
+        sfcache->addSpriteFramesWithFile("GJ_LaunchSheet.plist");
+
+        auto time4 = benchTimer();
+
+        auto winSize = CCDirector::get()->getWinSize();
+
+        gm->loadBackground(1);
+
+        auto time5 = benchTimer();
+
+        auto bg = CCSprite::create("game_bg_01_001.png");
+        this->addChild(bg);
+        bg->setPosition(winSize / 2.f);
+
+        CCApplication::get(); // ??
+        bg->setScale(CCDirector::get()->getScreenScaleFactorMax());
+        bg->setColor({0x00, 0x66, 0xff});
+
+        auto logo = CCSprite::createWithSpriteFrameName("GJ_logo_001.png");
+        this->addChild(logo);
+        logo->setPosition(winSize / 2.f);
+
+        auto robtopLogo = CCSprite::createWithSpriteFrameName("RobTopLogoBig_001.png");
+        this->addChild(robtopLogo);
+        robtopLogo->setPosition(logo->getPosition() + CCPoint{0.f, 80.f});
+
+        m_unknown2 = true;
+        m_loadStep = 0;
+
+        auto cocosLogo = CCSprite::createWithSpriteFrameName("cocos2DxLogo.png");
+        this->addChild(cocosLogo);
+        cocosLogo->setPosition({winSize.width - 34.f, 13.f});
+        cocosLogo->setScale(0.6f);
+
+        auto fmodLogo = CCSprite::createWithSpriteFrameName("fmodLogo.png");
+        this->addChild(fmodLogo);
+        fmodLogo->setPosition(cocosLogo->getPosition() + CCPoint{0.f, 20.f});
+        fmodLogo->setScale(0.6f);
+        fmodLogo->setColor({0, 0, 0});
+
+        m_caption = CCLabelBMFont::create(this->getLoadingString(), "goldFont.fnt");
+        this->addChild(m_caption);
+        m_caption->setPosition({winSize.width * 0.5f, winSize.height * 0.5f - 70.f});
+        m_caption->setScale(0.7f);
+        m_caption->setVisible(false);
+
+        // xmm0-3 = 28.f, 0.5f, 1.f, 440.f
+        // why are they in reverse?? idk
+        auto lstr = this->getLoadingString();
+        this->m_textArea =  TextArea::create(lstr, "goldFont.fnt", 1.f, 440.f, {0.5f, 0.5f}, 28.f, true);
+        this->addChild(m_textArea);
+        m_textArea->setPosition({winSize.width / 2.f, winSize.height / 2.f - 100.f});
+        m_textArea->setScale(0.7f);
+
+        auto csize = m_caption->getContentSize();
+
+        if (csize.width > 300.f) {
+            m_caption->setScale(300.f / csize.width);
+        }
+
+        float scale = std::min(m_caption->getScale(), 0.7f);
+        m_caption->setScale(scale);
+
+        auto groove = CCSprite::create("slidergroove.png");
+        this->addChild(groove, 3);
+
+        m_sliderBar = CCSprite::create("sliderBar.png");
+        m_sliderGrooveXPos = groove->getTextureRect().size.width - 4.f;
+        m_sliderGrooveHeight = 8.f;
+
+        ccTexParams params = {
+            GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT
+        };
+        m_sliderBar->getTexture()->setTexParameters(&params);
+        groove->addChild(m_sliderBar, -1);
+        m_sliderBar->setAnchorPoint({0.f, 0.f});
+        m_sliderBar->setPosition({2.f, 4.f});
+        auto txareaPos = m_textArea->getPosition();
+        groove->setPosition({m_caption->getPosition().x, txareaPos.y + 40.f});
+
+        this->updateProgress(0);
+        auto* acm = CCDirector::get()->getActionManager();
+        auto action = CCSequence::create(
+            CCDelayTime::create(0.f),
+            CCCallFunc::create(this, callfunc_selector(LoadingLayer::loadAssets)),
+            nullptr
+        );
+
+        acm->addAction(action, this, false);
+
+        auto time6 = benchTimer();
+        // log::debug("Period 1: {}", formatDuration(time2 - time1));
+        // log::debug("Period 2: {}", formatDuration(time3 - time2));
+        // log::debug("Period 3: {}", formatDuration(time4 - time3));
+        // log::debug("Period 4: {}", formatDuration(time5 - time4));
+        // log::debug("Period 5: {}", formatDuration(time6 - time5));
+
+        return true;
     }
 };

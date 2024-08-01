@@ -1,16 +1,16 @@
 // Nothing done here due to the biggest bottleneck being parsing the savefile (which cant be easily sped up)
 
-// #include <Geode/Geode.hpp>
-// #include <Geode/modify/GameManager.hpp>
-// #include <util.hpp>
+#include <Geode/Geode.hpp>
+#include <Geode/modify/GameManager.hpp>
+#include <util.hpp>
 
-// using namespace geode::prelude;
+using namespace geode::prelude;
 
-// #ifdef __clang__
-// # define B_floorf __builtin_floorf
-// #else
-// # define B_floorf std::floorf
-// #endif
+#ifdef __clang__
+# define B_floorf __builtin_floorf
+#else
+# define B_floorf std::floorf
+#endif
 
 // class $modify(GameManager) {
 //     bool init() {
@@ -69,6 +69,9 @@
 
 //     void setupReimpl() {
 //         m_setup = true;
+//         auto start = benchTimer();
 //         this->loadDataFromFile(m_fileName);
+//         auto took = benchTimer() - start;
+//         log::debug("took to load: {}", formatDuration(took));
 //     }
 // };
