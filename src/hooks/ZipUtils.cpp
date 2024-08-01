@@ -115,8 +115,6 @@ class $modify(ZipUtils) {
             encryptDecryptImpl(data, size, key);
         }
 
-        auto sv = std::string_view((char*) data, size);
-
         std::vector<uint8_t> rawData = blaze::base64::decode(reinterpret_cast<char*>(data), size, true);
         if (rawData.empty()) {
             log::debug("decompressString2 fail 1");

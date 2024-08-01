@@ -155,7 +155,7 @@ namespace blaze {
 
         size_t writtenSize;
 
-        auto result1 = this->decompress(input, size, chunk.data(), size * 32, writtenSize);
+        auto result1 = this->decompress(input, size, chunk.data(), chunk.size(), writtenSize);
         if (result1.isOk()) {
             chunk.resize(writtenSize);
             return Ok(std::move(chunk));
