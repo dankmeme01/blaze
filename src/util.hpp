@@ -81,4 +81,59 @@ namespace blaze {
     // Allocates aligned memory on heap, throws std::bad_alloc on failure. Must be freed with `alignedFree`
     void* alignedMalloc(size_t size, size_t alignment);
     void alignedFree(void* data);
+
+    [[noreturn]] void unreachable();
+
+    // kinda like unique_ptr<uint8_t[]> but with specified size
+    struct OwnedMemoryChunk {
+        uint8_t* data = nullptr;
+        size_t size;
+
+        inline ~OwnedMemoryChunk() {
+            std::free(data);
+        }
+
+        inline OwnedMemoryChunk(size_t size) : data(reinterpret_cast<uint8_t*>(std::malloc(size))), size(size) {
+            if (!this->data) {
+                throw std::bad_alloc();
+            }
+        }
+
+        // Note that this class takes ownership of the passed pointer!
+        inline OwnedMemoryChunk(uint8_t* data, size_t size) : data(data), size(size) {}
+        inline OwnedMemoryChunk(std::unique_ptr<uint8_t[]> ptr, size_t size) : data(ptr.release()), size(size) {}
+
+        inline std::pair<uint8_t*, size_t> release() {
+            auto p = std::make_pair(data, size);
+
+            this->data = nullptr;
+            this->size = 0;
+
+            return p;
+        }
+
+        inline void realloc(size_t newSize) {
+            this->data = reinterpret_cast<uint8_t*>(std::realloc(data, newSize));
+            if (!this->data) {
+                throw std::bad_alloc();
+            }
+
+            this->size = newSize;
+        }
+
+        OwnedMemoryChunk(const OwnedMemoryChunk&) = delete;
+        OwnedMemoryChunk& operator=(const OwnedMemoryChunk&) = delete;
+
+        OwnedMemoryChunk(OwnedMemoryChunk&& other) {
+            std::tie(this->data, this->size) = other.release();
+        }
+
+        OwnedMemoryChunk& operator=(OwnedMemoryChunk&& other) {
+            if (this != &other) {
+                std::tie(this->data, this->size) = other.release();
+            }
+
+            return *this;
+        }
+    };
 }

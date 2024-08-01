@@ -42,6 +42,12 @@ CPMAddPackage(
     OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_INCLUDE_LIBRARIES container" # escape with \\\;
 )
 CPMAddPackage("gh:simdutf/simdutf#83c0e74")
+CPMAddPackage(
+    NAME libdeflate
+    GIT_REPOSITORY "https://github.com/ebiggers/libdeflate.git"
+    GIT_TAG "v1.20"
+    OPTIONS "LIBDEFLATE_BUILD_SHARED_LIB OFF" "LIBDEFLATE_BUILD_GZIP OFF"
+)
 
 if (BLAZE_USE_TRACY)
     # taken from https://github.com/cgytrus/AlgebraDash/blob/main/CMakeLists.txt
@@ -62,4 +68,4 @@ if (BLAZE_USE_TRACY)
     add_compile_options("-Wno-incompatible-pointer-types")
 endif()
 
-target_link_libraries(${PROJECT_NAME} asp Boost::container simdutf)
+target_link_libraries(${PROJECT_NAME} asp Boost::container simdutf libdeflate_static)

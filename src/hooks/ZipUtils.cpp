@@ -2,32 +2,63 @@
 #include <Geode/modify/ZipUtils.hpp>
 
 #include <algo/base64.hpp>
+#include <algo/compress.hpp>
 #include <algo/xor.hpp>
 #include <util.hpp>
 
 using namespace geode::prelude;
+
+constexpr static int COMPRESSION_MODE = 3;
 
 class $modify(ZipUtils) {
     static void onModify(auto& self) {
         BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::compressString);
         BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::decompressString);
         BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::decompressString2);
+        BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::ccInflateMemory);
+        BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::ccInflateMemoryWithHint);
+        BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::ccDeflateMemory);
     }
 
-    // static int ccDeflateMemory(unsigned char*, unsigned int, unsigned char**);
-    // static int ccDeflateMemoryWithHint(unsigned char*, unsigned int, unsigned char**, unsigned int);
+    static int ccInflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
+        blaze::Decompressor dec;
+        dec.setMode(blaze::CompressionMode::Gzip);
+        auto chunk = dec.decompressToChunk(input, size);
 
-    static gd::string compressString(gd::string const& data, bool encrypt, int key) {
-        unsigned char* deflatedBuf = nullptr;
-        auto deflatedSize = ccDeflateMemory((uint8_t*)(data.data()), data.size(), &deflatedBuf);
-
-        if (deflatedSize < 1) {
-            delete[] deflatedBuf;
-            return data;
+        if (!chunk) {
+            log::warn("ccDeflateMemory failed, calling original: {}", chunk.unwrapErr());
+            return ZipUtils::ccDeflateMemory(input, size, outp);
         }
 
-        auto buffer = blaze::base64::encodeToString(deflatedBuf, deflatedSize, true);
-        delete[] deflatedBuf;
+        auto [outPtr, outSize] = chunk->release();
+
+        *outp = outPtr;
+        return outSize;
+    }
+
+    static int ccInflateMemoryWithHint(unsigned char* input, unsigned int size, unsigned char** outp, unsigned int hint) {
+        return ccInflateMemory(input, size, outp);
+    }
+
+    static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
+        blaze::Compressor dec(COMPRESSION_MODE);
+        dec.setMode(blaze::CompressionMode::Gzip);
+
+        auto chunk = dec.compressToChunk(input, size);
+
+        auto [outPtr, outSize] = chunk.release();
+
+        *outp = outPtr;
+        return outSize;
+    }
+
+    static gd::string compressString(gd::string const& data, bool encrypt, int key) {
+        blaze::Compressor compressor(COMPRESSION_MODE);
+        compressor.setMode(blaze::CompressionMode::Gzip);
+
+        auto compressedData = compressor.compress(data.data(), data.size());
+
+        auto buffer = blaze::base64::encodeToString(compressedData.data(), compressedData.size(), true);
 
         if (encrypt) {
             encryptDecryptImpl(buffer.data(), buffer.size(), key);
@@ -55,15 +86,20 @@ class $modify(ZipUtils) {
             return ZipUtils::decompressString(input, encrypted, key);
         }
 
-        unsigned char* inflated = nullptr;
-        size_t outlen = ccInflateMemory(rawData.data(), rawData.size(), &inflated);
+        blaze::Decompressor decompressor;
+        decompressor.setMode(blaze::CompressionMode::Gzip);
+        auto result = decompressor.decompressToString(rawData.data(), rawData.size());
 
-        if (0 < outlen) {
+        if (result.isOk()) {
             // success!
-            return gd::string(reinterpret_cast<const char*>(inflated), outlen);
+#ifdef GEODE_IS_ANDROID
+            return gd::string(std::move(result.unwrap()));
+#else
+            return std::move(result.unwrap());
+#endif
         }
 
-        log::warn("decompressString fail 2");
+        log::warn("decompressString2 fail 2: {}", result.unwrapErr());
 
         // if failed, try to fall back to original implementation, "just in case"
         return ZipUtils::decompressString(input, encrypted, key);
@@ -73,7 +109,6 @@ class $modify(ZipUtils) {
         if (!data || size < 1) {
             return ""; // TODO is it just "" or "\0" idk
         }
-
 
         if (encrypted) {
             // decrypt the data right into the original buffer
@@ -93,15 +128,22 @@ class $modify(ZipUtils) {
             return ZipUtils::decompressString2(data, encrypted, size, key);
         }
 
-        unsigned char* inflated = nullptr;
-        size_t outlen = ccInflateMemory(rawData.data(), rawData.size(), &inflated);
+        blaze::Decompressor decompressor;
+        decompressor.setMode(blaze::CompressionMode::Gzip);
 
-        if (0 < outlen) {
+        auto result = decompressor.decompressToString(rawData.data(), rawData.size());
+
+        if (result.isOk()) {
+            auto retval = std::move(result.unwrap());
             // success!
-            return gd::string(reinterpret_cast<const char*>(inflated), outlen);
+#ifdef GEODE_IS_ANDROID
+            return gd::string(retval);
+#else
+            return retval;
+#endif
         }
 
-        log::warn("decompressString2 fail 2");
+        log::warn("decompressString2 fail 2: {}", result.unwrapErr());
 
         // if failed, try to fall back to original implementation
         if (encrypted) {
@@ -121,5 +163,3 @@ class $modify(ZipUtils) {
         blaze::xor_u8(static_cast<uint8_t*>(data), size, static_cast<uint8_t>(key));
     }
 };
-
-

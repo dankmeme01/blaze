@@ -30,4 +30,13 @@ void alignedFree(void* data) {
 #endif
 }
 
+void unreachable() {
+#ifdef __clang__
+    __builtin_unreachable();
+#else
+    __assume(false);
+#endif
+}
+
+
 }
