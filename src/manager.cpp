@@ -1,6 +1,6 @@
 #include "manager.hpp"
 
-#include <crc32.hpp>
+#include <algo/crc32.hpp>
 #include <formats.hpp>
 #include <tracing.hpp>
 

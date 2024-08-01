@@ -13,7 +13,6 @@
 #include <manager.hpp>
 #include <formats.hpp>
 #include <ccimageext.hpp>
-#include <crc32.hpp>
 
 using namespace geode::prelude;
 using blaze::CCImageExt;

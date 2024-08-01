@@ -5,8 +5,8 @@
 #include <spng.h>
 
 #include <manager.hpp>
-#include <alpha.hpp>
-#include <crc32.hpp>
+#include <algo/alpha.hpp>
+#include <algo/crc32.hpp>
 #include <tracing.hpp>
 
 using namespace geode::prelude;

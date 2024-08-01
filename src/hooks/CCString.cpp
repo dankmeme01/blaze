@@ -33,7 +33,7 @@ $execute {
         "CCString::initWithFormatAndValist",
         tulip::hook::TulipConvention::Default
     ).unwrap();
-    hook->setPriority(999999);
+    hook->setPriority(99999999);
 
     // auto start2 = benchTimer();
     // for (size_t i = 0; i < 65536; i++) {

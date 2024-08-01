@@ -2,7 +2,7 @@
 
 #include <spng.h>
 #include <fpng.h>
-#include <alpha.hpp>
+#include <algo/alpha.hpp>
 #include <tracing.hpp>
 
 using namespace geode::prelude;

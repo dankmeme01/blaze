@@ -39,6 +39,17 @@ class $modify(CCEGLView) {
     Ret_ Name_(A_ a, B_ b, C_ c, D_ d, E_ e) { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(a, b, c, d, e); } };
 #define PROFILER_HOOK_9(Ret_, Class_, Name_, A_, B_, C_, D_, E_, F_) class GEODE_CRTP2(GEODE_CONCAT(profilerHook, __LINE__), Class_) { \
     Ret_ Name_(A_ a, B_ b, C_ c, D_ d, E_ e, F_ f) { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(a, b, c, d, e, f); } };
+#define PROFILER_HOOK_10(Ret_, Class_, Name_, A_, B_, C_, D_, E_, F_, G_) class GEODE_CRTP2(GEODE_CONCAT(profilerHook, __LINE__), Class_) { \
+    Ret_ Name_(A_ a, B_ b, C_ c, D_ d, E_ e, F_ f, G_ g) { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(a, b, c, d, e, f, g); } };
+#define PROFILER_HOOK_11(Ret_, Class_, Name_, A_, B_, C_, D_, E_, F_, G_, H_) class GEODE_CRTP2(GEODE_CONCAT(profilerHook, __LINE__), Class_) { \
+    Ret_ Name_(A_ a, B_ b, C_ c, D_ d, E_ e, F_ f, G_ g, H_ h) { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(a, b, c, d, e, f, g, h); } };
+#define PROFILER_HOOK_12(Ret_, Class_, Name_, A_, B_, C_, D_, E_, F_, G_, H_, I_) class GEODE_CRTP2(GEODE_CONCAT(profilerHook, __LINE__), Class_) { \
+    Ret_ Name_(A_ a, B_ b, C_ c, D_ d, E_ e, F_ f, G_ g, H_ h, I_ i) { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(a, b, c, d, e, f, g, h, i); } };
+#define PROFILER_HOOK_13(Ret_, Class_, Name_, A_, B_, C_, D_, E_, F_, G_, H_, I_, J_) class GEODE_CRTP2(GEODE_CONCAT(profilerHook, __LINE__), Class_) { \
+    Ret_ Name_(A_ a, B_ b, C_ c, D_ d, E_ e, F_ f, G_ g, H_ h, I_ i, J_ j) { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(a, b, c, d, e, f, g, h, i, j); } };
+#define PROFILER_HOOK_14(Ret_, Class_, Name_, A_, B_, C_, D_, E_, F_, G_, H_, I_, J_, K_) class GEODE_CRTP2(GEODE_CONCAT(profilerHook, __LINE__), Class_) { \
+    Ret_ Name_(A_ a, B_ b, C_ c, D_ d, E_ e, F_ f, G_ g, H_ h, I_ i, J_ j, K_ k) { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(a, b, c, d, e, f, g, h, i, j, k); } };
+
 #define PROFILER_HOOK(...) GEODE_INVOKE(GEODE_CONCAT(PROFILER_HOOK_, GEODE_NUMBER_OF_ARGS(__VA_ARGS__)), __VA_ARGS__)
 
 PROFILER_HOOK(void, CCEGLView, pollEvents);
@@ -71,6 +82,71 @@ PROFILER_HOOK(void, GameObject, setObjectColor, const ccColor3B&)
 
 PROFILER_HOOK(void, GameObject, updateOrientedBox)
 PROFILER_HOOK(void, GJBaseGameLayer, removeObjectFromSection, GameObject*)
+PROFILER_HOOK(int, GJBaseGameLayer, checkCollisions, PlayerObject*, float, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, visit);
+PROFILER_HOOK(void, GJBaseGameLayer, addKeyframe, KeyframeGameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, addToGroup, GameObject*, int, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, addToGroups, GameObject*, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, addToSection, GameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, bumpPlayer, PlayerObject*, EffectGameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, checkCollisionBlocks, EffectGameObject*, gd::vector<EffectGameObject*>*, int);
+PROFILER_HOOK(int, GJBaseGameLayer, checkCollisions, PlayerObject*, float, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, checkpointActivated, CheckpointGameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, checkSpawnObjects);
+PROFILER_HOOK(void, GJBaseGameLayer, collisionCheckObjects, PlayerObject*, gd::vector<GameObject*>*, int, float);
+PROFILER_HOOK(void, GJBaseGameLayer, createGroundLayer, int, int);
+PROFILER_HOOK(void, GJBaseGameLayer, createPlayer);
+PROFILER_HOOK(void, GJBaseGameLayer, destroyObject, GameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, gameEventTriggered, GJGameEvent, int, int);
+PROFILER_HOOK(float, GJBaseGameLayer, getEasedAreaValue, GameObject*, EnterEffectInstance*, float, bool, int);
+PROFILER_HOOK(bool, GJBaseGameLayer, init);
+PROFILER_HOOK(void, GJBaseGameLayer, loadUpToPosition, float, int, int);
+PROFILER_HOOK(void, GJBaseGameLayer, moveAreaObject, GameObject*, float, float);
+PROFILER_HOOK(void, GJBaseGameLayer, objectsCollided, int, int);
+PROFILER_HOOK(void, GJBaseGameLayer, pickupItem, EffectGameObject*);
+PROFILER_HOOK(bool, GJBaseGameLayer, playerCircleCollision, PlayerObject*, GameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, playerTouchedRing, PlayerObject*, RingObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, playerTouchedTrigger, PlayerObject*, EffectGameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, playerWillSwitchMode, PlayerObject*, GameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, processAdvancedFollowActions, float);
+PROFILER_HOOK(void, GJBaseGameLayer, processAreaActions, float, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, processAreaEffects, gd::vector<EnterEffectInstance>*, GJAreaActionType, float, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, processAreaMoveGroupAction, cocos2d::CCArray*, EnterEffectInstance*, cocos2d::CCPoint, int, int, int, int, int, bool, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, processAreaRotateGroupAction, cocos2d::CCArray*, EnterEffectInstance*, cocos2d::CCPoint, int, int, int, int, int, bool, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, processAreaTransformGroupAction, cocos2d::CCArray*, EnterEffectInstance*, cocos2d::CCPoint, int, int, int, int, int, bool, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, processCommands, float);
+PROFILER_HOOK(void, GJBaseGameLayer, processDynamicObjectActions, int, float);
+PROFILER_HOOK(void, GJBaseGameLayer, processFollowActions);
+PROFILER_HOOK(void, GJBaseGameLayer, processMoveActions);
+PROFILER_HOOK(void, GJBaseGameLayer, processMoveActionsStep, float, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, processPlayerFollowActions, float);
+PROFILER_HOOK(void, GJBaseGameLayer, processQueuedAudioTriggers);
+PROFILER_HOOK(void, GJBaseGameLayer, processQueuedButtons);
+PROFILER_HOOK(void, GJBaseGameLayer, processRotationActions);
+PROFILER_HOOK(void, GJBaseGameLayer, processTransformActions, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, removeFromGroup, GameObject*, int);
+PROFILER_HOOK(void, GJBaseGameLayer, removeObjectFromSection, GameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, resetAudio);
+PROFILER_HOOK(int, GJBaseGameLayer, resetAreaObjectValues, GameObject*, bool);
+PROFILER_HOOK(float, GJBaseGameLayer, getAreaObjectValue, EnterEffectInstance*, GameObject*, cocos2d::CCPoint&, bool&);
+PROFILER_HOOK(void, GJBaseGameLayer, resetCamera);
+PROFILER_HOOK(void, GJBaseGameLayer, resetPlayer);
+PROFILER_HOOK(void, GJBaseGameLayer, rotateGameplay, RotateGameplayGameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, setupLayers);
+PROFILER_HOOK(void, GJBaseGameLayer, sortSectionVector);
+PROFILER_HOOK(void, GJBaseGameLayer, spawnGroup, int, bool, double, gd::vector<int> const&, int, int);
+PROFILER_HOOK(void, GJBaseGameLayer, spawnObject, GameObject*, double, gd::vector<int> const&);
+PROFILER_HOOK(void, GJBaseGameLayer, teleportPlayer, TeleportPortalObject*, PlayerObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, toggleFlipped, bool, bool);
+PROFILER_HOOK(void, GJBaseGameLayer, update, float);
+PROFILER_HOOK(void, GJBaseGameLayer, updateCamera, float);
+PROFILER_HOOK(void, GJBaseGameLayer, updateCollisionBlocks);
+PROFILER_HOOK(void, GJBaseGameLayer, updateLevelColors);
+PROFILER_HOOK(void, GJBaseGameLayer, updateShaderLayer, float);
+PROFILER_HOOK(void, GJBaseGameLayer, updateObjectSection, GameObject*);
+PROFILER_HOOK(void, GJBaseGameLayer, updateTimeWarp, GameObject*, float);
+PROFILER_HOOK(void, GJBaseGameLayer, updateTimeWarp, float);
+PROFILER_HOOK(void, GJBaseGameLayer, updateZoom, float, float, int, float, int, int);
 
 PROFILER_HOOK(void, GameObject, activateObject)
 PROFILER_HOOK(void, GameObject, activateObject)
@@ -157,9 +233,5 @@ PROFILER_HOOK(void, CCLabelBMFont, updateLabel)
 PROFILER_HOOK(void, CCNode, update, float)
 PROFILER_HOOK(void, CCNode, visit)
 PROFILER_HOOK(void, CCNode, updateTransform)
-
-// post frame? haven't actually seen this getting called so idk
- // TODO address // PROFILER_HOOK(void, CCApplication, updateVerticalSync)
- // TODO address // PROFILER_HOOK(void, CCApplication, updateControllerKeys)
 
 #endif // BLAZE_TRACY
