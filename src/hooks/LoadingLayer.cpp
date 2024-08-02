@@ -6,6 +6,7 @@
 
 #include <asp/sync/Mutex.hpp>
 #include <asp/thread/ThreadPool.hpp>
+#include <asp/thread/Thread.hpp>
 
 #include <TaskTimer.hpp>
 #include <manager.hpp>
@@ -121,6 +122,26 @@ static void asyncAddSpriteFrames(const char* fullPlistGuess, const char* plist, 
     dict->release();
 }
 
+// Note: Releases the image
+static CCTexture2D* addTexture(CCImage* image, const gd::string& sheetName) {
+    auto texture = new CCTexture2D();
+    if (!texture->initWithImage(image)) {
+        delete texture;
+        image->release();
+        log::warn("failed to init cctexture2d: {}", image);
+        return nullptr;
+    }
+
+    auto _lck = texCacheMutex.lock();
+    CCTextureCache::get()->m_pTextures->setObject(texture, sheetName);
+    _lck.unlock();
+
+    texture->release();
+    image->release();
+
+    return texture;
+}
+
 static void loadFont(const char* name) {
     ZoneScoped;
 
@@ -135,7 +156,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     };
 
     static void onModify(auto& self) {
-        (void) self.setHookPriority("LoadingLayer::loadAssets", 999999999).unwrap(); // so we are only invoked once geode calls us
+        BLAZE_HOOK_VERY_LAST(LoadingLayer::loadAssets); // so we are only invoked once geode calls us
         BLAZE_HOOK_VERY_LAST(LoadingLayer::init); // idk geode was crashin without this
     }
 
@@ -235,11 +256,9 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         cmanager->addDict("coinPickupEffect.png", false);
         cmanager->addDict("explodeEffect.png", false);
 
-        BLAZE_TIMER_STEP("Achievements");
+        BLAZE_TIMER_STEP("Misc");
 
         AchievementManager::sharedState();
-
-        BLAZE_TIMER_STEP("Misc");
 
         // kinda obsolete lol
         auto* gm = GameManager::get();
@@ -298,20 +317,10 @@ class $modify(MyLoadingLayer, LoadingLayer) {
                 [&](const MTTextureInitTask& task) {
                     ZoneScopedN("texture init task");
 
-                    auto texture = new CCTexture2D();
-                    if (!texture->initWithImage(task.img)) {
-                        delete texture;
-                        task.img->release();
-                        log::warn("failed to init cctexture2d: {}", task.img);
+                    CCTexture2D* texture = addTexture(task.img, task.sheetName);
+                    if (!texture) {
                         return;
                     }
-
-                    auto _lck = texCacheMutex.lock();
-                    tcache->m_pTextures->setObject(texture, task.sheetName);
-                    _lck.unlock();
-
-                    texture->release();
-                    task.img->release();
 
                     if (task.plistToLoad) {
                         // adding sprite frames
@@ -350,14 +359,43 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     bool init(bool fromReload) {
         if (!CCLayer::init()) return false;
 
-        BLAZE_TIMER_START("(LoadingLayer::init) FMOD setup");
+        BLAZE_TIMER_START("(LoadingLayer::init) FMOD setup + initialization");
 
         this->m_fromRefresh = fromReload;
         CCDirector::get()->m_bDisplayStats = true;
         CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
 
+        // load the launchsheet and bg in another thread, as fmod setup takes a while, and image loading can be parallelized.
+        asp::Thread<> sheetThread;
+
+        std::optional<MTTextureInitTask> launchSheetInitTask;
+        std::optional<MTTextureInitTask> bgInitTask;
+        sheetThread.setLoopFunction([&](asp::StopToken<>& stopToken) {
+            launchSheetInitTask = asyncLoadImage("GJ_LaunchSheet.png", "GJ_LaunchSheet.plist");
+            bgInitTask = asyncLoadImage("game_bg_01_001.png", nullptr);
+            stopToken.stop();
+        });
+
+        sheetThread.start();
+
+        // FMOD setup
+
         if (!fromReload) {
             FMODAudioEngine::get()->setup();
+        }
+
+        // Continue loading launchsheet
+        BLAZE_TIMER_STEP("Launchsheet loading");
+        sheetThread.join();
+
+        if (launchSheetInitTask) {
+            addTexture(launchSheetInitTask->img, launchSheetInitTask->sheetName);
+            auto* sfcache = CCSpriteFrameCache::get();
+            sfcache->addSpriteFramesWithFile("GJ_LaunchSheet.plist");
+        }
+
+        if (bgInitTask) {
+            addTexture(bgInitTask->img, bgInitTask->sheetName);
         }
 
         auto* gm = GameManager::get();
@@ -366,18 +404,9 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             GameLevelManager::get()->getLevelSaveData();
         }
 
-        BLAZE_TIMER_STEP("Launchsheet loading");
-
-        auto* tcache = CCTextureCache::get();
-        tcache->addImage("GJ_LaunchSheet.png", false);
-        auto* sfcache = CCSpriteFrameCache::get();
-        sfcache->addSpriteFramesWithFile("GJ_LaunchSheet.plist");
+        BLAZE_TIMER_STEP("LoadingLayer UI");
 
         auto winSize = CCDirector::get()->getWinSize();
-
-        gm->loadBackground(1);
-
-        BLAZE_TIMER_STEP("LoadingLayer UI");
 
         auto bg = CCSprite::create("game_bg_01_001.png");
         this->addChild(bg);

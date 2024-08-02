@@ -27,9 +27,14 @@ void TaskTimer::Summary::print() {
     log::debug("==================================");
 }
 
-void TaskTimer::start(std::string_view stepName) {
-    this->reset();
+TaskTimer::TaskTimer(std::string_view stepName) {
     this->step(stepName);
+}
+
+TaskTimer::~TaskTimer() {
+    if (measurements.size()) {
+        this->finish().print();
+    }
 }
 
 void TaskTimer::step(std::string_view stepName) {

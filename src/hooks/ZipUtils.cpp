@@ -7,6 +7,7 @@
 #include <algo/compress.hpp>
 #include <algo/xor.hpp>
 #include <util.hpp>
+#include <TaskTimer.hpp>
 
 using namespace geode::prelude;
 
@@ -115,7 +116,7 @@ class $modify(ZipUtils) {
 #endif
         }
 
-        log::warn("decompressString2 fail 2: {}", result.unwrapErr());
+        log::warn("decompressString fail 2: {}", result.unwrapErr());
 
         // if failed, try to fall back to original implementation, "just in case"
         return ZipUtils::decompressString(input, encrypted, key);
@@ -126,10 +127,14 @@ class $modify(ZipUtils) {
             return ""; // TODO is it just "" or "\0" idk
         }
 
+        BLAZE_TIMER_START("EncryptDecrypt");
+
         if (encrypted) {
             // decrypt the data right into the original buffer
             encryptDecryptImpl(data, size, key);
         }
+
+        BLAZE_TIMER_STEP("Base64");
 
         std::vector<uint8_t> rawData = blaze::base64::decode(reinterpret_cast<char*>(data), size, true);
         if (rawData.empty()) {
@@ -141,6 +146,8 @@ class $modify(ZipUtils) {
 
             return ZipUtils::decompressString2(data, encrypted, size, key);
         }
+
+        BLAZE_TIMER_STEP("Decompress");
 
         blaze::Decompressor decompressor;
         decompressor.setMode(blaze::CompressionMode::Gzip);
