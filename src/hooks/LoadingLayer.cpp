@@ -6,6 +6,8 @@
 
 #include <asp/sync/Mutex.hpp>
 #include <asp/thread/ThreadPool.hpp>
+
+#include <TaskTimer.hpp>
 #include <manager.hpp>
 #include <ccimageext.hpp>
 #include <tracing.hpp>
@@ -151,6 +153,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     void customLoadStep() {
         ZoneScoped;
 
+        BLAZE_TIMER_START("(customLoadStep) Task queueing");
+
         auto startTime = std::chrono::high_resolution_clock::now();
 
         auto tcache = CCTextureCache::get();
@@ -216,7 +220,11 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         loadFont("bigFont.fnt");
         // loadFont("goldFont.fnt");
 
+        BLAZE_TIMER_STEP("ObjectManager");
+
         ObjectManager::instance()->setup();
+
+        BLAZE_TIMER_STEP("Effects & animations");
 
         auto afcache = CCAnimateFrameCache::sharedSpriteFrameCache();
         auto cmanager = CCContentManager::sharedManager();
@@ -227,7 +235,11 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         cmanager->addDict("coinPickupEffect.png", false);
         cmanager->addDict("explodeEffect.png", false);
 
+        BLAZE_TIMER_STEP("Achievements");
+
         AchievementManager::sharedState();
+
+        BLAZE_TIMER_STEP("Misc");
 
         // kinda obsolete lol
         auto* gm = GameManager::get();
@@ -266,6 +278,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
                 }, task);
             });
         }
+
+        BLAZE_TIMER_STEP("Main thread tasks");
 
         while (true) {
             ZoneScopedN("tasks");
@@ -319,12 +333,12 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         m_fields->threadPool.join();
 
+        BLAZE_TIMER_END();
+
         auto tookTime = std::chrono::high_resolution_clock::now() - startTime;
         log::debug("Loading took {}, handing off..", formatDuration(tookTime));
 
         this->finishLoading();
-
-        // run deferred tasks..
     }
 
     void finishLoading() {
@@ -336,7 +350,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     bool init(bool fromReload) {
         if (!CCLayer::init()) return false;
 
-        auto time1 = benchTimer();
+        BLAZE_TIMER_START("(LoadingLayer::init) FMOD setup");
 
         this->m_fromRefresh = fromReload;
         CCDirector::get()->m_bDisplayStats = true;
@@ -346,28 +360,24 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             FMODAudioEngine::get()->setup();
         }
 
-        auto time2 = benchTimer();
-
         auto* gm = GameManager::get();
         if (gm->m_switchModes) {
             gm->m_switchModes = false;
             GameLevelManager::get()->getLevelSaveData();
         }
 
-        auto time3 = benchTimer();
+        BLAZE_TIMER_STEP("Launchsheet loading");
 
         auto* tcache = CCTextureCache::get();
         tcache->addImage("GJ_LaunchSheet.png", false);
         auto* sfcache = CCSpriteFrameCache::get();
         sfcache->addSpriteFramesWithFile("GJ_LaunchSheet.plist");
 
-        auto time4 = benchTimer();
-
         auto winSize = CCDirector::get()->getWinSize();
 
         gm->loadBackground(1);
 
-        auto time5 = benchTimer();
+        BLAZE_TIMER_STEP("LoadingLayer UI");
 
         auto bg = CCSprite::create("game_bg_01_001.png");
         this->addChild(bg);
@@ -449,12 +459,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         acm->addAction(action, this, false);
 
-        auto time6 = benchTimer();
-        // log::debug("Period 1: {}", formatDuration(time2 - time1));
-        // log::debug("Period 2: {}", formatDuration(time3 - time2));
-        // log::debug("Period 3: {}", formatDuration(time4 - time3));
-        // log::debug("Period 4: {}", formatDuration(time5 - time4));
-        // log::debug("Period 5: {}", formatDuration(time6 - time5));
+        BLAZE_TIMER_END();
 
         return true;
     }

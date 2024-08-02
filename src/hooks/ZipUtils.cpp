@@ -1,6 +1,8 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/ZipUtils.hpp>
 
+#include <Geode/loader/SettingEvent.hpp>
+
 #include <algo/base64.hpp>
 #include <algo/compress.hpp>
 #include <algo/xor.hpp>
@@ -8,7 +10,21 @@
 
 using namespace geode::prelude;
 
-constexpr static int COMPRESSION_MODE = 3;
+// i thought of making it an option, but past level 1 it's really diminishing returns.
+// level 0 is fastest but can be up to 50% bigger in size than level 1
+// levels 1-12 have nearly identical decompression speed and size, but the compression speed grows up to multiple seconds.
+
+static int COMPRESSION_MODE = 1;
+
+$on_mod(Loaded) {
+    bool store = Mod::get()->getSettingValue<bool>("uncompressed-saves");
+
+    COMPRESSION_MODE = store ? 0 : 1;
+
+    listenForSettingChanges("uncompressed-saves", +[](bool value) {
+        COMPRESSION_MODE = value ? 0 : 1;
+    });
+}
 
 class $modify(ZipUtils) {
     static void onModify(auto& self) {

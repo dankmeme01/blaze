@@ -7,6 +7,10 @@ using namespace geode::prelude;
 namespace blaze {
     Compressor::Compressor(int level) : mode(CompressionMode::Gzip) {
         this->compressor = libdeflate_alloc_compressor(level);
+
+        if (!compressor) {
+            throw std::runtime_error("Failed to create compressor");
+        }
     }
 
     Compressor::~Compressor() {
@@ -54,6 +58,10 @@ namespace blaze {
 
     Decompressor::Decompressor() : mode(CompressionMode::Gzip) {
         this->decompressor = libdeflate_alloc_decompressor();
+
+        if (!this->decompressor) {
+            throw std::runtime_error("Failed to create decompressor");
+        }
     }
 
     Decompressor::~Decompressor() {
@@ -184,9 +192,4 @@ namespace blaze {
             default: blaze::unreachable();
         }
     }
-}
-
-$execute {
-    auto* compressor = libdeflate_alloc_compressor(3);
-    auto outBytes = libdeflate_zlib_compress_bound(compressor, 3);
 }

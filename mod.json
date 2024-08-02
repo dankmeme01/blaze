@@ -11,5 +11,13 @@
 	"version": "v1.1.0",
 	"developer": "dankmeme",
 	"description": "Optimization mod",
-	"early-load": true
+	"early-load": true,
+	"settings": {
+		"uncompressed-saves": {
+			"name": "Uncompressed Save",
+			"type": "bool",
+			"description": "Stores the save data without compression, resulting in slightly faster loading & saving times.\n\n<cy>Note: this may increase the size of your savefile by up to 50%.</c>",
+			"default": false
+		}
+	}
 }

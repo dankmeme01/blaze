@@ -6,12 +6,10 @@
 
 using namespace geode::prelude;
 
-$execute {
+LoadManager::LoadManager() {
     auto dir = Mod::get()->getSaveDir() / "cached-images";
     (void) file::createDirectoryAll(dir);
-}
 
-LoadManager::LoadManager() {
     converterThread.setStartFunction([] {
         utils::thread::setName("PNG Converter");
     });

@@ -7,6 +7,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 project(blaze VERSION 1.0.0)
 
 option(BLAZE_USE_TRACY "Use tracy" OFF)
+option(BLAZE_DEBUG "Debug mode" OFF)
 
 # source files
 file(GLOB_RECURSE SOURCES
@@ -32,6 +33,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE src/)
 
 # make spng use miniz instead of zlib
 target_compile_definitions(${PROJECT_NAME} PRIVATE SPNG_USE_MINIZ=1 SPNG_STATIC=1)
+
+if (BLAZE_DEBUG)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_DEBUG=1)
+endif()
 
 CPMAddPackage("gh:dankmeme01/asp2#782a4fa")
 CPMAddPackage(
