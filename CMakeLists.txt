@@ -61,7 +61,9 @@ endif()
 
 # silly thing
 if (ANDROID)
-    target_compile_options(${PROJECT_NAME} PRIVATE "-march=armv8-a+crc")
+    if (${GEODE_TARGET_PLATFORM} STREQUAL "Android64")
+        target_compile_options(${PROJECT_NAME} PRIVATE "-march=armv8-a+crc")
+    endif()
 endif()
 
 if (BLAZE_USE_TRACY)
