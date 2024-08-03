@@ -58,6 +58,21 @@ class $modify(ZipUtils) {
 
     static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
         blaze::Compressor dec(COMPRESSION_MODE);
+
+        // Instead of gzip, we use zlib for compression.
+        // I honestly have no idea why this is needed, but I believe it's due to a difference between libdeflate and zlib.
+        // GD uses zlib in a gzip-compatible format, whereas blaze uses libdeflate with gzip mode for decompression and zlib mode for compression.
+        // Here's the results of my testing:
+        //
+        // save with zlib in gzip mode -> load with libdeflate in gzip mode        - success.
+        // save with zlib in gzip mode -> load with libdeflate in zlib mode        - invalid data error.
+        // save with libdeflate in gzip mode -> load with libdeflate in gzip mode  - success.
+        // save with libdeflate in gzip mode -> load with zlib in gzip mode        - load error*.
+        // save with libdeflate in zlib mode -> load with libdeflate in gzip mode  - success.
+        // save with libdeflate in zlib mode -> load with zlib in gzip mode        - success.
+        //
+        // This weird behavior essentially leaves us with one option if we want our saves to be vanilla-compatible,
+        // which is to save in zlib mode and load in gzip mode.
         dec.setMode(blaze::CompressionMode::Zlib);
 
         auto chunk = dec.compressToChunk(input, size);
