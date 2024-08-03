@@ -5,7 +5,10 @@
 using namespace geode::prelude;
 
 namespace blaze {
-    Compressor::Compressor(int level) : mode(CompressionMode::Gzip) {
+    constexpr auto DEFAULT_COMPRESSION = CompressionMode::Gzip;
+    constexpr auto DEFAULT_DECOMPRESSION = CompressionMode::Gzip;
+
+    Compressor::Compressor(int level) : mode(DEFAULT_COMPRESSION) {
         this->compressor = libdeflate_alloc_compressor(level);
 
         if (!compressor) {
@@ -56,7 +59,7 @@ namespace blaze {
         return out;
     }
 
-    Decompressor::Decompressor() : mode(CompressionMode::Gzip) {
+    Decompressor::Decompressor() : mode(DEFAULT_DECOMPRESSION) {
         this->decompressor = libdeflate_alloc_decompressor();
 
         if (!this->decompressor) {

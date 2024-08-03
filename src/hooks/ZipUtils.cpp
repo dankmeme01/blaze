@@ -25,7 +25,24 @@ $on_mod(Loaded) {
     listenForSettingChanges("uncompressed-saves", +[](bool value) {
         COMPRESSION_MODE = value ? 0 : 1;
     });
+
+    // uint8_t buffer[65536];
+    // blaze::Compressor comp(1);
+    // comp.setMode(blaze::CompressionMode::Gzip);
+    // auto compressed = comp.compressToChunk(buffer, 65536);
+
+    // log::debug("Compressed to {} bytes", compressed.size);
+
+    // unsigned char* inflated = nullptr;
+    // auto res = ZipUtils::ccInflateMemory(compressed.data, compressed.size, &inflated);
+    // log::debug("Res: {}", res);
+    // delete[] inflated;
+
+    // std::exit(0);
 }
+
+#define BLAZE_HOOK_COMPRESS 1
+#define BLAZE_HOOK_DECOMPRESS 1
 
 class $modify(ZipUtils) {
     static void onModify(auto& self) {
@@ -37,6 +54,7 @@ class $modify(ZipUtils) {
         BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::ccDeflateMemory);
     }
 
+#if BLAZE_HOOK_DECOMPRESS
     static int ccInflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
         blaze::Decompressor dec;
         auto chunk = dec.decompressToChunk(input, size);
@@ -54,56 +72,6 @@ class $modify(ZipUtils) {
 
     static int ccInflateMemoryWithHint(unsigned char* input, unsigned int size, unsigned char** outp, unsigned int hint) {
         return ccInflateMemory(input, size, outp);
-    }
-
-    static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
-        blaze::Compressor compressor(COMPRESSION_MODE);
-
-        // Instead of gzip, we use zlib for compression.
-        // I honestly have no idea why this is needed, but I believe it's due to a difference between libdeflate and zlib.
-        // GD uses zlib in a gzip-compatible format, whereas blaze uses libdeflate with gzip mode for decompression and zlib mode for compression.
-        // Here's the results of my testing:
-        //
-        // save with zlib in gzip mode -> load with libdeflate in gzip mode        - success.
-        // save with zlib in gzip mode -> load with libdeflate in zlib mode        - invalid data error.
-        // save with libdeflate in gzip mode -> load with libdeflate in gzip mode  - success.
-        // save with libdeflate in gzip mode -> load with zlib in gzip mode        - load error*.
-        // save with libdeflate in zlib mode -> load with libdeflate in gzip mode  - success.
-        // save with libdeflate in zlib mode -> load with zlib in gzip mode        - success.
-        //
-        // This weird behavior essentially leaves us with one option if we want our saves to be vanilla-compatible,
-        // which is to save in zlib mode and load in gzip mode.
-        compressor.setMode(blaze::CompressionMode::Zlib);
-
-        auto chunk = compressor.compressToChunk(input, size);
-
-        auto [outPtr, outSize] = chunk.release();
-
-        *outp = outPtr;
-        return outSize;
-    }
-
-    static gd::string compressString(gd::string const& data, bool encrypt, int key) {
-        BLAZE_TIMER_START("compressString compression");
-
-        blaze::Compressor compressor(COMPRESSION_MODE);
-        compressor.setMode(blaze::CompressionMode::Zlib);
-
-        auto compressedData = compressor.compress(data.data(), data.size());
-
-        BLAZE_TIMER_STEP("base64");
-
-        auto buffer = blaze::base64::encodeToString(compressedData.data(), compressedData.size(), true);
-
-        BLAZE_TIMER_STEP("encryptDecrypt");
-
-        if (encrypt) {
-            encryptDecryptImpl(buffer.data(), buffer.size(), key);
-        }
-
-        BLAZE_TIMER_END();
-
-        return buffer;
     }
 
     static gd::string decompressString(gd::string const& input, bool encrypted, int key) {
@@ -193,6 +161,44 @@ class $modify(ZipUtils) {
 
         return ZipUtils::decompressString2(data, encrypted, size, key);
     }
+#endif
+
+#if BLAZE_HOOK_COMPRESS
+    static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
+        blaze::Compressor compressor(COMPRESSION_MODE);
+        compressor.setMode(blaze::CompressionMode::Gzip);
+
+        auto chunk = compressor.compressToChunk(input, size);
+
+        auto [outPtr, outSize] = chunk.release();
+
+        *outp = outPtr;
+        return outSize;
+    }
+
+    static gd::string compressString(gd::string const& data, bool encrypt, int key) {
+        BLAZE_TIMER_START("compressString compression");
+
+        blaze::Compressor compressor(COMPRESSION_MODE);
+        compressor.setMode(blaze::CompressionMode::Gzip);
+
+        auto compressedData = compressor.compress(data.data(), data.size());
+
+        BLAZE_TIMER_STEP("base64");
+
+        auto buffer = blaze::base64::encodeToString(compressedData.data(), compressedData.size(), true);
+
+        BLAZE_TIMER_STEP("encryptDecrypt");
+
+        if (encrypt) {
+            encryptDecryptImpl(buffer.data(), buffer.size(), key);
+        }
+
+        BLAZE_TIMER_END();
+
+        return buffer;
+    }
+#endif
 
     static gd::string encryptDecrypt(gd::string const& str, int key) {
         gd::string out{std::string_view(str)};

@@ -12,6 +12,11 @@ static int base64DecodeHook(unsigned char *in, unsigned int inLength, unsigned c
 
     auto buf = new uint8_t[outLen];
     outLen = blaze::base64::decode(reinterpret_cast<char*>(in), inLength, buf, true);
+    if (outLen == 0) {
+        log::warn("base64 decode failed");
+        delete[] buf;
+        buf = nullptr;
+    }
 
     *out = buf;
 
