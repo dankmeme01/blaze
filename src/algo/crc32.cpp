@@ -5,6 +5,7 @@
 # include <crc32intrin.h>
 #elif defined(ASP_IS_ARM64)
 # include <arm_neon.h>
+# include <sys/auxv.h>
 #endif
 
 #include <tracing.hpp>
@@ -63,10 +64,6 @@ namespace blaze {
 
         return ~crc;
     }
-#else
-    static inline uint32_t crc32hw(const uint8_t* bytes, size_t len, uint32_t initial) {
-        return crc32slow(bytes, len, initial);
-    }
 #endif
 
 	// picks the best crc32 algorithm at runtime
@@ -76,8 +73,21 @@ namespace blaze {
 #ifdef ASP_IS_X86
         if (asp::simd::getFeatures().sse4_2) return crc32hw(bytes, len, initial);
         return crc32slow(bytes, len, initial);
+#elif defined(ASP_IS_ARM64)
+		// tbh this should be moved into aps
+		static bool supportsCrc32 = []{
+			constexpr int hwcapCrc32 = (1 << 7); // asm/hwcap.h
+			auto hwcap = getauxval(AT_HWCAP);
+			return hwcap & hwcapCrc32;
+		}();
+
+		if (supportsCrc32) {
+			return crc32hw(bytes, len, initial);
+		} else {
+			return crc32slow(bytes, len, initial);
+		}
 #else
-        return crc32hw(bytes, len, initial);
+	return crc32slow(bytes, len, initial);
 #endif
     }
 

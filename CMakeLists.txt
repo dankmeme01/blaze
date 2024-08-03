@@ -59,6 +59,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(boost_container PRIVATE "-Wno-incompatible-pointer-types")
 endif()
 
+# silly thing
+if (ANDROID)
+    target_compile_options(${PROJECT_NAME} PRIVATE "-march=armv8-a+crc")
+endif()
+
 if (BLAZE_USE_TRACY)
     # taken from https://github.com/cgytrus/AlgebraDash/blob/main/CMakeLists.txt
     set(TRACY_ENABLE ON CACHE BOOL "" FORCE)

@@ -24,7 +24,17 @@ static bool initHook(CCString* self, const char* format, va_list args) {
 }
 
 $execute {
-    auto addr = GetProcAddress(GetModuleHandleW(L"libcocos2d.dll"), "?initWithFormatAndValist@CCString@cocos2d@@AEAA_NPEBDPEAD@Z");
+#ifdef GEODE_IS_WINDOWS
+    void* addr = GetProcAddress(GetModuleHandleW(L"libcocos2d.dll"), "?initWithFormatAndValist@CCString@cocos2d@@AEAA_NPEBDPEAD@Z");
+#elif defined(GEODE_IS_ANDROID)
+    void* handle = dlopen("libcocos2dcpp.so", RTLD_LAZY | RTLD_NOLOAD);
+    void* addr = dlsym(handle, "_ZN7cocos2d8CCString23initWithFormatAndValistEPKcSt9__va_list");
+#else
+    void* addr = nullptr;
+#endif
+    if (!addr) {
+        return;
+    }
 
     // auto start1 = benchTimer();
     // for (size_t i = 0; i < 65536; i++) {
@@ -33,7 +43,7 @@ $execute {
     // auto took1 = benchTimer() - start1;
 
     auto hook = Mod::get()->hook(
-        reinterpret_cast<void*>(addr),
+        addr,
         &initHook,
         "CCString::initWithFormatAndValist",
         tulip::hook::TulipConvention::Default

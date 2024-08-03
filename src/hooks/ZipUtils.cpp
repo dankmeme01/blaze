@@ -102,7 +102,7 @@ class $modify(ZipUtils) {
             return ""; // TODO is it just "" or "\0" idk
         }
 
-        BLAZE_TIMER_START("EncryptDecrypt");
+        BLAZE_TIMER_START("decompressString2 (EncryptDecrypt)");
 
         if (encrypted) {
             // decrypt the data right into the original buffer
@@ -185,12 +185,6 @@ class $modify(ZipUtils) {
         return buffer;
     }
 #endif
-
-    static gd::string encryptDecrypt(gd::string const& str, int key) {
-        gd::string out{std::string_view(str)};
-        encryptDecryptImpl(out.data(), out.size(), key);
-        return out;
-    }
 
     static void encryptDecryptImpl(void* data, size_t size, int key) {
         blaze::xor_u8(static_cast<uint8_t*>(data), size, static_cast<uint8_t>(key));

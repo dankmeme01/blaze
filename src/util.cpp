@@ -9,7 +9,9 @@ void* alignedMalloc(size_t size, size_t alignment) {
 #ifdef _MSC_VER
     _aligned_malloc(size, alignment);
 #else
-    std::aligned_alloc(alignment, size);
+    // std::aligned_alloc(alignment, size);
+    nullptr;
+    geode::log::warn("TODO implement");
 #endif
 
     if (ptr) return ptr;
