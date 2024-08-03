@@ -39,7 +39,6 @@ class $modify(ZipUtils) {
 
     static int ccInflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
         blaze::Decompressor dec;
-        dec.setMode(blaze::CompressionMode::Gzip);
         auto chunk = dec.decompressToChunk(input, size);
 
         if (!chunk) {
@@ -59,7 +58,7 @@ class $modify(ZipUtils) {
 
     static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
         blaze::Compressor dec(COMPRESSION_MODE);
-        dec.setMode(blaze::CompressionMode::Gzip);
+        dec.setMode(blaze::CompressionMode::Zlib);
 
         auto chunk = dec.compressToChunk(input, size);
 
@@ -70,16 +69,23 @@ class $modify(ZipUtils) {
     }
 
     static gd::string compressString(gd::string const& data, bool encrypt, int key) {
+        BLAZE_TIMER_START("compressString compression");
+
         blaze::Compressor compressor(COMPRESSION_MODE);
-        compressor.setMode(blaze::CompressionMode::Gzip);
 
         auto compressedData = compressor.compress(data.data(), data.size());
 
+        BLAZE_TIMER_STEP("base64");
+
         auto buffer = blaze::base64::encodeToString(compressedData.data(), compressedData.size(), true);
+
+        BLAZE_TIMER_STEP("encryptDecrypt");
 
         if (encrypt) {
             encryptDecryptImpl(buffer.data(), buffer.size(), key);
         }
+
+        BLAZE_TIMER_END();
 
         return buffer;
     }
@@ -104,7 +110,6 @@ class $modify(ZipUtils) {
         }
 
         blaze::Decompressor decompressor;
-        decompressor.setMode(blaze::CompressionMode::Gzip);
         auto result = decompressor.decompressToString(rawData.data(), rawData.size());
 
         if (result.isOk()) {
@@ -150,7 +155,6 @@ class $modify(ZipUtils) {
         BLAZE_TIMER_STEP("Decompress");
 
         blaze::Decompressor decompressor;
-        decompressor.setMode(blaze::CompressionMode::Gzip);
 
         auto result = decompressor.decompressToString(rawData.data(), rawData.size());
 
