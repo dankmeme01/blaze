@@ -28,7 +28,7 @@ void BLAZE_AVX2 xor_u8_avx2(uint8_t* buffer, size_t size, uint8_t key) {
         __m256i data = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(buffer + i));
         // xor
         __m256i result = _mm256_xor_si256(data, keyVec);
-        // sore
+        // store
         _mm256_storeu_si256(reinterpret_cast<__m256i*>(buffer + i), result);
     }
 
@@ -50,8 +50,33 @@ void BLAZE_SSE2 xor_u8_sse2(uint8_t* buffer, size_t size, uint8_t key) {
         __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer + i));
         // xor
         __m128i result = _mm_xor_si128(data, keyVec);
-        // sore
+        // store
         _mm_storeu_si128(reinterpret_cast<__m128i*>(buffer + i), result);
+    }
+
+    // process remainder
+    for (; i < size; i++) {
+        buffer[i] ^= key;
+    }
+}
+
+#elif defined(ASP_IS_ARM64)
+
+#include <arm_neon.h>
+
+void xor_u8_neon(uint8_t* buffer, size_t size, uint8_t key) {
+    uint8x16_t keyVec = vdupq_n_u8(key);
+
+    size_t i = 0;
+    size_t vecSize = sizeof(uint8x16_t);
+
+    for (; i + vecSize <= size; i += vecSize) {
+        // load data
+        uint8x16_t data = vld1q_u8(buffer + i);
+        // xor
+        uint8x16_t result = veorq_u8(data, keyVec);
+        // store
+        vst1q_u8(buffer + i, result);
     }
 
     // process remainder
@@ -68,11 +93,12 @@ static void chooseImpl() {
 #ifdef ASP_IS_X86
     if (features.avx2) {
         xor_u8_impl = &xor_u8_avx2;
-    } else if (features.avx) {
+    } else if (features.sse2) {
         xor_u8_impl = &xor_u8_sse2;
     } else {
         xor_u8_impl = &xor_u8_scalar;
     }
+
 #elif defined(ASP_IS_ARM64)
     xor_u8_impl = &xor_u8_neon;
 #else
