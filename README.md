@@ -1,4 +1,4 @@
-# Quick Load
+# Blaze
 
 Mod that significantly speeds up loading times.
 
