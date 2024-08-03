@@ -19,6 +19,8 @@ feats:
 
 Overall, game launches can be up to 2-2.5x faster, on my machine on average the speed goes up from ~3.85s to ~1.85s (38mb save, i5-13600k, no megahack, with globed asset preloading)
 
+Note: all those numbers are on Windows. On other operating systems, the performance increase might not be that big.
+
 
 ## Credit
 
