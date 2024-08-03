@@ -57,7 +57,7 @@ class $modify(ZipUtils) {
     }
 
     static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
-        blaze::Compressor dec(COMPRESSION_MODE);
+        blaze::Compressor compressor(COMPRESSION_MODE);
 
         // Instead of gzip, we use zlib for compression.
         // I honestly have no idea why this is needed, but I believe it's due to a difference between libdeflate and zlib.
@@ -73,9 +73,9 @@ class $modify(ZipUtils) {
         //
         // This weird behavior essentially leaves us with one option if we want our saves to be vanilla-compatible,
         // which is to save in zlib mode and load in gzip mode.
-        dec.setMode(blaze::CompressionMode::Zlib);
+        compressor.setMode(blaze::CompressionMode::Zlib);
 
-        auto chunk = dec.compressToChunk(input, size);
+        auto chunk = compressor.compressToChunk(input, size);
 
         auto [outPtr, outSize] = chunk.release();
 
@@ -87,6 +87,7 @@ class $modify(ZipUtils) {
         BLAZE_TIMER_START("compressString compression");
 
         blaze::Compressor compressor(COMPRESSION_MODE);
+        compressor.setMode(blaze::CompressionMode::Zlib);
 
         auto compressedData = compressor.compress(data.data(), data.size());
 
