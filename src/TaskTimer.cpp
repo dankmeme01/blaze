@@ -32,6 +32,10 @@ TaskTimer::TaskTimer(std::string_view stepName) {
 }
 
 TaskTimer::~TaskTimer() {
+    if (!currentStep.empty()) {
+        this->step("");
+    }
+
     if (measurements.size()) {
         this->finish().print();
     }
