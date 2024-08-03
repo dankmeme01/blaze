@@ -25,20 +25,6 @@ $on_mod(Loaded) {
     listenForSettingChanges("uncompressed-saves", +[](bool value) {
         COMPRESSION_MODE = value ? 0 : 1;
     });
-
-    // uint8_t buffer[65536];
-    // blaze::Compressor comp(1);
-    // comp.setMode(blaze::CompressionMode::Gzip);
-    // auto compressed = comp.compressToChunk(buffer, 65536);
-
-    // log::debug("Compressed to {} bytes", compressed.size);
-
-    // unsigned char* inflated = nullptr;
-    // auto res = ZipUtils::ccInflateMemory(compressed.data, compressed.size, &inflated);
-    // log::debug("Res: {}", res);
-    // delete[] inflated;
-
-    // std::exit(0);
 }
 
 #define BLAZE_HOOK_COMPRESS 1

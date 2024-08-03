@@ -61,27 +61,43 @@ namespace blaze::base64 {
         return simdutf::decodedLen(data, dataLen);
     }
 
+    static size_t fixEncodedBase64(const char* data, size_t size) {
+        for (size_t i = std::max((size_t)0, size - 8); i < size; i++) {
+            if (data[i] == '=' || data[i] == '\0') {
+                return i;
+            }
+        }
+
+        return size;
+    }
+
+    static size_t breakEncodedBase64(char* outBuf, size_t size) {
+        // i believe cocos base64 decoder needs a null byte so /shrug
+        // i have spent so much time fighting with that thing i cant be bothered lol
+        outBuf[size] = '=';
+        outBuf[size + 1] = '\0';
+
+        return size + 2;
+    }
+
     namespace simdutf {
         static ::simdutf::base64_options getFlags(bool urlsafe) {
             return urlsafe ? ::simdutf::base64_url : ::simdutf::base64_default_no_padding;
         }
 
-        static bool isWhitespace(char c) {
-            // ignored chars
-            return c == '\n' || c == '\r' || c == ' ' || c == '\t' || c == '\0';
-        }
-
         size_t encode(const uint8_t* data, size_t size, char* outBuf, bool urlsafe) {
-            return ::simdutf::binary_to_base64(reinterpret_cast<const char*>(data), size, outBuf, getFlags(urlsafe));
+            size_t out = ::simdutf::binary_to_base64(reinterpret_cast<const char*>(data), size, outBuf, getFlags(urlsafe));
+            out = breakEncodedBase64(outBuf, out);
+            return out;
         }
 
         size_t encodedLen(size_t rawLen, bool urlsafe) {
-            return ::simdutf::base64_length_from_binary(rawLen, getFlags(urlsafe));
+            return ::simdutf::base64_length_from_binary(rawLen, getFlags(urlsafe)) + 2; // the +2 is from `breakEncodedBase64`
         }
 
         size_t decode(const char* data, size_t size, uint8_t* outBuf, bool urlsafe) {
-            // strip padding and bad chars
-            while (data[size - 1] == '=' || isWhitespace(data[size - 1])) size--;
+            // a weird peculiarity of gd/cocos is that data can have some trailing garbage at the end, we want to avoid decompressing that
+            size = fixEncodedBase64(data, size);
 
             auto result = ::simdutf::base64_to_binary(data, size, reinterpret_cast<char*>(outBuf), getFlags(urlsafe));
             if (result.error) {
