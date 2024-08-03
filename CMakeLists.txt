@@ -54,6 +54,11 @@ CPMAddPackage(
     OPTIONS "LIBDEFLATE_BUILD_SHARED_LIB OFF" "LIBDEFLATE_BUILD_GZIP OFF"
 )
 
+# Suppress some warnings
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(boost_container PRIVATE "-Wno-incompatible-pointer-types")
+endif()
+
 if (BLAZE_USE_TRACY)
     # taken from https://github.com/cgytrus/AlgebraDash/blob/main/CMakeLists.txt
     set(TRACY_ENABLE ON CACHE BOOL "" FORCE)

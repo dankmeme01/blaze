@@ -15,6 +15,7 @@ std::string TaskTimer::Summary::format() {
         out += formatMeasurement(name, timeTook);
         out += "\n";
     }
+    out += fmt::format("Total time: {}\n", formatDuration(totalTime));
 
     return out;
 }
@@ -24,6 +25,7 @@ void TaskTimer::Summary::print() {
     for (auto& [name, timeTook] : measurements) {
         log::debug("{}", formatMeasurement(name, timeTook));
     }
+    log::debug("Total time: {}", formatDuration(totalTime));
     log::debug("==================================");
 }
 
@@ -47,6 +49,7 @@ void TaskTimer::step(std::string_view stepName) {
     if (currentStep.empty()) {
         this->currentStep = stepName;
         this->currentStepTime = timer;
+        this->firstStepTime = timer;
         return;
     }
 
@@ -60,9 +63,11 @@ void TaskTimer::step(std::string_view stepName) {
 }
 
 TaskTimer::Summary TaskTimer::finish() {
-    this->step("");
+    if (!currentStep.empty()) {
+        this->step("");
+    }
 
-    Summary summary(std::move(measurements));
+    Summary summary(std::move(measurements), std::chrono::high_resolution_clock::now() - this->firstStepTime);
     this->reset();
     return summary;
 }

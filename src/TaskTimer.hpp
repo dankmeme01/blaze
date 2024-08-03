@@ -18,6 +18,7 @@ class TaskTimer {
     std::vector<std::pair<std::string, std::chrono::nanoseconds>> measurements;
     std::string currentStep;
     std::chrono::high_resolution_clock::time_point currentStepTime;
+    std::chrono::high_resolution_clock::time_point firstStepTime;
 
 public:
     TaskTimer(std::string_view name);
@@ -25,12 +26,13 @@ public:
 
     struct Summary {
         std::vector<std::pair<std::string, std::chrono::nanoseconds>> measurements;
+        std::chrono::nanoseconds totalTime;
 
         std::string format();
         void print();
 
-        Summary(const decltype(measurements)& m) : measurements(m) {}
-        Summary(decltype(measurements)&& m) : measurements(std::move(m)) {}
+        Summary(const decltype(measurements)& m, std::chrono::nanoseconds total) : measurements(m), totalTime(total) {}
+        Summary(decltype(measurements)&& m, std::chrono::nanoseconds total) : measurements(std::move(m)), totalTime(total) {}
     };
 
     void step(std::string_view stepName);

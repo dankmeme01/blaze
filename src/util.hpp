@@ -1,11 +1,16 @@
 #pragma once
 
+#include <chrono>
+#include <string>
+#include <new>
+#include <memory>
+
 #define BLAZE_HOOK_PRIO(func, p) \
-    {auto _xrs = self.setHookPriority(#func, p); \
+    do { auto _xrs = self.setHookPriority(#func, p); \
     if (!_xrs) { \
         geode::log::error("hook apply failed: {}", _xrs.unwrapErr());\
     } \
-    }
+    } while (0)
 
 // Hook closer to original
 #define BLAZE_HOOK_LAST(func) BLAZE_HOOK_PRIO(func, 999999)
