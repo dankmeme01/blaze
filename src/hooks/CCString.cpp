@@ -12,7 +12,12 @@ static bool initHook(CCString* self, const char* format, va_list args) {
     ZoneScoped;
 
     int size = std::vsnprintf(nullptr, 0, format, args);
+
+#ifndef GEODE_IS_ANDROID
     self->m_sString = gd::string(size + 1, '\0');
+#else
+    self->m_sString = gd::string(std::string(size + 1, '\0'));
+#endif
     std::vsnprintf(self->m_sString.data(), self->m_sString.size(), format, args);
 
     return true;
