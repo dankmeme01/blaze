@@ -2,7 +2,10 @@
 
 Mod for Geometry Dash that significantly speeds up loading times.
 
-### BEFORE using, at the current stage the mod may corrupt your local levels, and will cause your save to be unloadable if you uninstall the mod. Beware
+## BEFORE using, please backup your savefile.
+
+I believe I've fixed most savefile corruption issues, but it's best to be careful anyway.
+
 
 todo readme
 
