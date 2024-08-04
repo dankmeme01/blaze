@@ -240,6 +240,30 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             ObjectToolbox::sharedState();
         });
 
+        // Push all the threaded tasks to the threadpool
+        static asp::Channel<MainThreadTask> mainThreadQueue;
+
+        for (auto& task : tasks) {
+            m_fields->threadPool.pushTask([&, task = std::move(task)] {
+                // do stuff..
+                std::visit(makeVisitor {
+                    [&](const LoadSheetTask& task) {
+                        if (auto res = asyncLoadImage(task.sheet, task.plist)) {
+                            mainThreadQueue.push(std::move(res.value()));
+                        }
+                    },
+                    [&](const LoadImageTask& task) {
+                        if (auto res = asyncLoadImage(task.image, nullptr)) {
+                            mainThreadQueue.push(std::move(res.value()));
+                        }
+                    },
+                    [&](const LoadCustomTask& task) {
+                        task.func();
+                    },
+                }, task);
+            });
+        }
+
         loadFont("chatFont.fnt");
         loadFont("bigFont.fnt");
         // loadFont("goldFont.fnt");
@@ -269,37 +293,13 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             gm->m_everyPlaySetup = true;
         }
 
-        // might be wrong, might be Thonburi
-        CCTextInputNode::create(200.f, 50.f, "Temp", "bigFont.fnt");
+        CCTextInputNode::create(200.f, 50.f, "Temp", "Thonburi", 0x18, "bigFont.fnt");
 
         // 13
         // lol?
         auto wave = CCCircleWave::create(10.f, 5.f, 0.3f, true);
         this->addChild(wave);
         wave->setPosition({-100.f, -100.f});
-
-        static asp::Channel<MainThreadTask> mainThreadQueue;
-
-        for (auto& task : tasks) {
-            m_fields->threadPool.pushTask([&, task = std::move(task)] {
-                // do stuff..
-                std::visit(makeVisitor {
-                    [&](const LoadSheetTask& task) {
-                        if (auto res = asyncLoadImage(task.sheet, task.plist)) {
-                            mainThreadQueue.push(std::move(res.value()));
-                        }
-                    },
-                    [&](const LoadImageTask& task) {
-                        if (auto res = asyncLoadImage(task.image, nullptr)) {
-                            mainThreadQueue.push(std::move(res.value()));
-                        }
-                    },
-                    [&](const LoadCustomTask& task) {
-                        task.func();
-                    },
-                }, task);
-            });
-        }
 
         BLAZE_TIMER_STEP("Main thread tasks");
 
