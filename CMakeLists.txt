@@ -54,8 +54,6 @@ CPMAddPackage(
     OPTIONS "LIBDEFLATE_BUILD_SHARED_LIB OFF" "LIBDEFLATE_BUILD_GZIP OFF"
 )
 
-message(STATUS "Building blaze for ${GEODE_TARGET_PLATFORM}")
-
 # Suppress some warnings
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(boost_container PRIVATE "-Wno-incompatible-pointer-types")
@@ -63,7 +61,7 @@ endif()
 
 # silly thing
 if (ANDROID)
-    if (${GEODE_TARGET_PLATFORM} STREQUAL "Android64")
+    if (ANDROID_ABI STREQUAL "arm64-v8a")
         target_compile_options(${PROJECT_NAME} PRIVATE "-march=armv8-a+crc")
     endif()
 endif()
