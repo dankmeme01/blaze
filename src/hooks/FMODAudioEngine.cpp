@@ -61,7 +61,7 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
     // FMOD_TIMEUNIT buffersizeType;
     // m_system->getStreamBufferSize(&bufferSize, &buffersizeType);
 
-    if (!GameManager::get()->getGameVariable("0159")) {
+    if (!gv0159) {
         m_system->setDSPBufferSize(512, 4);
     }
 
@@ -74,7 +74,7 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
     int numRawSpeakers;
     m_system->getSoftwareFormat(&sampleRate, &speakerMode, &numRawSpeakers);
 
-    this->m_reducedQuality = GameManager::get()->getGameVariable("0142");
+    this->m_reducedQuality = reducedQuality;
     // TODO set the member for sample rate
     sampleRate = this->m_reducedQuality ? 24000 : 44100;
 
