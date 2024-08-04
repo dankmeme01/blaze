@@ -370,9 +370,9 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     bool init(bool fromReload) {
         m_fields->startedLoadingGame = std::chrono::high_resolution_clock::now();
 
-        if (!CCLayer::init()) return false;
-
         BLAZE_TIMER_START("(LoadingLayer::init) Initial setup");
+
+        if (!CCLayer::init()) return false;
 
         this->m_fromRefresh = fromReload;
         CCDirector::get()->m_bDisplayStats = true;
@@ -381,11 +381,18 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         // load the launchsheet and bg in another thread, as fmod setup takes a little bit, and image loading can be parallelized.
         asp::Thread<> sheetThread;
 
-        std::optional<MTTextureInitTask> launchSheetInitTask;
-        std::optional<MTTextureInitTask> bgInitTask;
+        asp::Channel<MTTextureInitTask> initTasks;
         sheetThread.setLoopFunction([&](asp::StopToken<>& stopToken) {
-            launchSheetInitTask = asyncLoadImage("GJ_LaunchSheet.png", "GJ_LaunchSheet.plist");
-            bgInitTask = asyncLoadImage("game_bg_01_001.png", nullptr);
+#define ASYNC_IMG(name) if (auto _t = asyncLoadImage(name, nullptr)) { initTasks.push(std::move(_t.value())); }
+#define ASYNC_SHEET(name, plist) if (auto _t = asyncLoadImage(name, plist)) { initTasks.push(std::move(_t.value())); }
+
+            ASYNC_SHEET("GJ_LaunchSheet.png", "GJ_LaunchSheet.plist");
+            ASYNC_IMG("game_bg_01_001.png");
+            ASYNC_IMG("slidergroove.png");
+            ASYNC_IMG("sliderBar.png");
+
+#undef ASYNC_IMG
+
             stopToken.stop();
         });
 
@@ -397,24 +404,33 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             FMODAudioEngine::get()->setup();
         }
 
-        // Continue loading launchsheet
-        BLAZE_TIMER_STEP("Launchsheet loading");
-        sheetThread.join();
-
-        if (launchSheetInitTask) {
-            addTexture(launchSheetInitTask->img, launchSheetInitTask->sheetName);
-            auto* sfcache = CCSpriteFrameCache::get();
-            sfcache->addSpriteFramesWithFile("GJ_LaunchSheet.plist");
-        }
-
-        if (bgInitTask) {
-            addTexture(bgInitTask->img, bgInitTask->sheetName);
-        }
-
         auto* gm = GameManager::get();
         if (gm->m_switchModes) {
             gm->m_switchModes = false;
             GameLevelManager::get()->getLevelSaveData();
+        }
+
+        // Continue loading launchsheet
+        BLAZE_TIMER_STEP("Launchsheet loading");
+
+        auto* sfcache = CCSpriteFrameCache::get();
+
+        while (true) {
+            if (initTasks.empty()) {
+                if (!sheetThread.isStopped()) {
+                    std::this_thread::yield();
+                    continue;
+                } else if (initTasks.empty()) {
+                    break;
+                }
+            }
+
+            auto iTask = initTasks.popNow();
+
+            addTexture(iTask.img, iTask.sheetName);
+            if (iTask.plistToLoad) {
+                sfcache->addSpriteFramesWithFile("GJ_LaunchSheet.plist");
+            }
         }
 
         BLAZE_TIMER_STEP("LoadingLayer UI");
