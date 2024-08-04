@@ -38,7 +38,7 @@ if (BLAZE_DEBUG)
     target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_DEBUG=1)
 endif()
 
-CPMAddPackage("gh:dankmeme01/asp2#782a4fa")
+CPMAddPackage("gh:dankmeme01/asp2#bf4bc5e")
 CPMAddPackage(
     NAME Boost
     VERSION 1.84.0

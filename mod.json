@@ -8,7 +8,7 @@
 	},
 	"id": "dankmeme.blaze",
 	"name": "Blaze",
-	"version": "v1.1.0",
+	"version": "v1.2.0",
 	"developer": "dankmeme",
 	"description": "Optimization mod",
 	"early-load": true,

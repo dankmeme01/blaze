@@ -25,7 +25,7 @@ static bool initHook(CCString* self, const char* format, va_list args) {
 
 $execute {
 #ifdef GEODE_IS_WINDOWS
-    void* addr = GetProcAddress(GetModuleHandleW(L"libcocos2d.dll"), "?initWithFormatAndValist@CCString@cocos2d@@AEAA_NPEBDPEAD@Z");
+    void* addr = reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"libcocos2d.dll"), "?initWithFormatAndValist@CCString@cocos2d@@AEAA_NPEBDPEAD@Z"));
 #elif defined(GEODE_IS_ANDROID)
     void* handle = dlopen("libcocos2dcpp.so", RTLD_LAZY | RTLD_NOLOAD);
     void* addr = dlsym(handle, "_ZN7cocos2d8CCString23initWithFormatAndValistEPKcSt9__va_list");

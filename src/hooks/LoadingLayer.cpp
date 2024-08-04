@@ -8,6 +8,7 @@
 #include <asp/thread/ThreadPool.hpp>
 #include <asp/thread/Thread.hpp>
 
+#include <hooks/FMODAudioEngine.hpp>
 #include <TaskTimer.hpp>
 #include <manager.hpp>
 #include <ccimageext.hpp>
@@ -153,6 +154,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     struct Fields {
         asp::ThreadPool threadPool{20};
         bool finishedLoading = false;
+        std::chrono::high_resolution_clock::time_point startedLoadingGame;
+        std::chrono::high_resolution_clock::time_point startedLoadingAssets;
     };
 
     static void onModify(auto& self) {
@@ -176,7 +179,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         BLAZE_TIMER_START("(customLoadStep) Task queueing");
 
-        auto startTime = std::chrono::high_resolution_clock::now();
+        m_fields->startedLoadingAssets = std::chrono::high_resolution_clock::now();
 
         auto tcache = CCTextureCache::get();
         auto sfcache = CCSpriteFrameCache::get();
@@ -342,10 +345,18 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         m_fields->threadPool.join();
 
+        BLAZE_TIMER_STEP("Ensure FMOD is initialized");
+        auto fae = HookedFMODAudioEngine::get();
+
+        {
+            std::lock_guard lock(fae->m_fields->initMutex);
+        }
+
         BLAZE_TIMER_END();
 
-        auto tookTime = std::chrono::high_resolution_clock::now() - startTime;
-        log::debug("Loading took {}, handing off..", formatDuration(tookTime));
+        auto tookTimeFull = std::chrono::high_resolution_clock::now() - m_fields->startedLoadingGame;
+        auto tookTimeAssets = std::chrono::high_resolution_clock::now() - m_fields->startedLoadingAssets;
+        log::info("Loading took {} (out of which assets were {}), handing off..", formatDuration(tookTimeFull), formatDuration(tookTimeAssets));
 
         this->finishLoading();
     }
@@ -357,15 +368,17 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
     // init reimpl
     bool init(bool fromReload) {
+        m_fields->startedLoadingGame = std::chrono::high_resolution_clock::now();
+
         if (!CCLayer::init()) return false;
 
-        BLAZE_TIMER_START("(LoadingLayer::init) FMOD setup + initialization");
+        BLAZE_TIMER_START("(LoadingLayer::init) Initial setup");
 
         this->m_fromRefresh = fromReload;
         CCDirector::get()->m_bDisplayStats = true;
         CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
 
-        // load the launchsheet and bg in another thread, as fmod setup takes a while, and image loading can be parallelized.
+        // load the launchsheet and bg in another thread, as fmod setup takes a little bit, and image loading can be parallelized.
         asp::Thread<> sheetThread;
 
         std::optional<MTTextureInitTask> launchSheetInitTask;
@@ -378,7 +391,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         sheetThread.start();
 
-        // FMOD setup
+        // FMOD setup (mostly asynchronous)
 
         if (!fromReload) {
             FMODAudioEngine::get()->setup();
@@ -482,7 +495,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         auto* acm = CCDirector::get()->getActionManager();
         auto action = CCSequence::create(
             CCDelayTime::create(0.f),
-            CCCallFunc::create(this, callfunc_selector(LoadingLayer::loadAssets)),
+            CCCallFunc::create(this, callfunc_selector(MyLoadingLayer::customLoadStep)),
             nullptr
         );
 
