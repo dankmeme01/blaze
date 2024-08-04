@@ -54,6 +54,8 @@ CPMAddPackage(
     OPTIONS "LIBDEFLATE_BUILD_SHARED_LIB OFF" "LIBDEFLATE_BUILD_GZIP OFF"
 )
 
+message(STATUS "Building blaze for ${GEODE_TARGET_PLATFORM}")
+
 # Suppress some warnings
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(boost_container PRIVATE "-Wno-incompatible-pointer-types")
