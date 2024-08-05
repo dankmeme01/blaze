@@ -261,11 +261,11 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             });
         }
 
+        BLAZE_TIMER_STEP("Fonts & ObjectManager");
+
         loadFont("chatFont.fnt");
         loadFont("bigFont.fnt");
         // loadFont("goldFont.fnt");
-
-        BLAZE_TIMER_STEP("ObjectManager");
 
         ObjectManager::instance()->setup();
 
@@ -395,7 +395,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         sheetThread.start();
 
-        // FMOD setup (mostly asynchronous)
+        // FMOD setup (asynchronous on Windows)
 
         if (!fromReload) {
             FMODAudioEngine::get()->setup();
@@ -470,8 +470,6 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         m_caption->setScale(0.7f);
         m_caption->setVisible(false);
 
-        // xmm0-3 = 28.f, 0.5f, 1.f, 440.f
-        // why are they in reverse?? idk
         auto lstr = this->getLoadingString();
         this->m_textArea =  TextArea::create(lstr, "goldFont.fnt", 1.f, 440.f, {0.5f, 0.5f}, 28.f, true);
         this->addChild(m_textArea);

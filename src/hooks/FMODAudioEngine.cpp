@@ -23,10 +23,14 @@ void HookedFMODAudioEngine::setupAudioEngine() {
         return;
     }
 
-    asp::Thread<bool, bool> thread;
-
     bool gv0159 = GameManager::get()->getGameVariable("0159");
     bool reducedQuality = GameManager::get()->getGameVariable("0142");
+
+#ifdef GEODE_IS_ANDROID
+    // this bullshit os cannot initialize fmod from a thread
+    this->setupAudioEngineReimpl(gv0159, reducedQuality);
+#else
+    asp::Thread<bool, bool> thread;
 
     thread.setLoopFunction([this](bool a, bool b, asp::StopToken<bool, bool>& stopToken) {
         this->setupAudioEngineReimpl(a, b);
@@ -35,6 +39,7 @@ void HookedFMODAudioEngine::setupAudioEngine() {
 
     thread.start(gv0159, reducedQuality);
     thread.detach();
+#endif
 }
 
 void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQuality) {
@@ -50,12 +55,15 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
 
     FMOD_CALL(FMOD::System_Create(&m_system));
 
+    if (!m_system) {
+        log::warn("FMOD System initialization failed, so the rest of the audio engine initialization cannot proceed.");
+        return;
+    }
+
     // unsigned int version;
     // m_system->getVersion(&version);
 
-    BLAZE_TIMER_STEP("FMOD misc inits");
-
-    FMOD::Debug_Initialize(0, FMOD_DEBUG_MODE_TTY, nullptr, nullptr);
+    BLAZE_TIMER_STEP("FMOD misc inits 1");
 
     // unsigned int bufferSize;
     // FMOD_TIMEUNIT buffersizeType;
@@ -75,12 +83,16 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
     m_system->getSoftwareFormat(&sampleRate, &speakerMode, &numRawSpeakers);
 
     this->m_reducedQuality = reducedQuality;
-    // TODO set the member for sample rate
     sampleRate = this->m_reducedQuality ? 24000 : 44100;
 
     m_system->setSoftwareFormat(sampleRate, speakerMode, numRawSpeakers);
 
+    BLAZE_TIMER_STEP("FMOD system init");
+
     FMOD_CALL(m_system->init(0x80, 0, nullptr));
+
+    BLAZE_TIMER_STEP("FMOD misc inits 2");
+
     FMOD_CALL(m_system->getSoftwareFormat(&m_sampleRate, nullptr, nullptr));
 
     m_system->createChannelGroup(nullptr, &m_backgroundMusicChannel);

@@ -13,7 +13,7 @@ feats:
 * 30-40% faster savefile loading
 * Up to 5-7x faster savefile saving
 * ~200-400% faster game resource loading
-* Parallelized audio engine loading
+* Parallelized audio engine loading (except on Android)
 * 5-10% faster string creation
 * Mod can be safely uninstalled and your savefile will still load
 
