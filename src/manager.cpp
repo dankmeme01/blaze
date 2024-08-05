@@ -73,8 +73,6 @@ std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSi
 
     unsigned long s;
 
-    GEODE_ANDROID(auto lock = zipFileMutex.lock());
-
     auto buf = CCFileUtils::get()->getFileData(path, "rb", &s);
     outSize = s;
 

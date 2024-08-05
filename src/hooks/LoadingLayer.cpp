@@ -96,14 +96,11 @@ static void asyncAddSpriteFrames(const char* fullPlistGuess, const char* plist, 
     {
         ZoneScopedN("asyndAddSpriteFrames ccdict");
 
-        GEODE_ANDROID(auto _zlck = LoadManager::get().zipFileMutex.lock());
         dict = CCDictionary::createWithContentsOfFileThreadSafe(fullPlistGuess);
 
         if (!dict) {
             dict = CCDictionary::createWithContentsOfFileThreadSafe(CCFileUtils::get()->fullPathForFilename(plist, false).c_str());
         }
-
-        GEODE_ANDROID(_zlck.unlock());
 
         if (!dict) {
             log::warn("failed to find the plist for {}", plist);

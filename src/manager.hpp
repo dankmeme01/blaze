@@ -9,8 +9,6 @@ class LoadManager : public SingletonBase<LoadManager> {
     LoadManager();
 
 public:
-    asp::Mutex<> zipFileMutex;
-
     bool reallocFromCache(uint32_t checksum, uint8_t*& outbuf, size_t& outsize);
     void queueForCache(const std::filesystem::path& path, std::vector<uint8_t>&& data);
     std::filesystem::path getCacheDir();
