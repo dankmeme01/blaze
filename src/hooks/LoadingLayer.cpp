@@ -437,7 +437,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
             addTexture(iTask.img, iTask.sheetName);
             if (iTask.plistToLoad) {
-                sfcache->addSpriteFramesWithFile("GJ_LaunchSheet.plist");
+                sfcache->addSpriteFramesWithFile(iTask.plistToLoad);
             }
         }
 
