@@ -140,10 +140,12 @@ static CCTexture2D* addTexture(CCImage* image, const gd::string& sheetName) {
     return texture;
 }
 
-static void loadFont(const char* name) {
+// Note: not thread safe
+static CCBMFontConfiguration* loadFontConfiguration(const char* name) {
     ZoneScoped;
 
-    CCLabelBMFont::create(" ", name);
+    // CCLabelBMFont::create(" ", name);
+    return FNTConfigLoadFile(name);
 }
 
 #include <Geode/modify/LoadingLayer.hpp>
@@ -189,11 +191,15 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             const char *image;
         };
 
+        struct LoadFontTask {
+            CCBMFontConfiguration* configuration;
+        };
+
         struct LoadCustomTask {
             std::function<void()> func;
         };
 
-        using PreloadTask = std::variant<LoadSheetTask, LoadImageTask, LoadCustomTask>;
+        using PreloadTask = std::variant<LoadSheetTask, LoadImageTask, LoadFontTask, LoadCustomTask>;
 
         using MainThreadTask = std::variant<MTTextureInitTask, LoadCustomTask>;
 
@@ -202,6 +208,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
 #define MAKE_LOADSHEET(name) tasks.push_back(LoadSheetTask { .sheet = name".png", .plist = name".plist" })
 #define MAKE_LOADIMG(name) tasks.push_back(LoadImageTask { .image = name".png" })
+#define MAKE_LOADFONT(name) tasks.push_back(LoadFontTask { .configuration = loadFontConfiguration(name) })
 #define MAKE_LOADCUSTOM(ft) tasks.push_back(LoadCustomTask { .func = [&] ft })
 
         MAKE_LOADSHEET("GJ_GameSheet");
@@ -237,6 +244,9 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             ObjectToolbox::sharedState();
         });
 
+        MAKE_LOADFONT("chatFont.fnt");
+        MAKE_LOADFONT("bigFont.fnt");
+
         // Push all the threaded tasks to the threadpool
         static asp::Channel<MainThreadTask> mainThreadQueue;
 
@@ -254,6 +264,11 @@ class $modify(MyLoadingLayer, LoadingLayer) {
                             mainThreadQueue.push(std::move(res.value()));
                         }
                     },
+                    [&](const LoadFontTask& task) {
+                        if (auto res = asyncLoadImage(task.configuration->getAtlasName(), nullptr)) {
+                            mainThreadQueue.push(std::move(res.value()));
+                        }
+                    },
                     [&](const LoadCustomTask& task) {
                         task.func();
                     },
@@ -261,11 +276,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             });
         }
 
-        BLAZE_TIMER_STEP("Fonts & ObjectManager");
-
-        loadFont("chatFont.fnt");
-        loadFont("bigFont.fnt");
-        // loadFont("goldFont.fnt");
+        BLAZE_TIMER_STEP("ObjectManager::setup");
 
         ObjectManager::instance()->setup();
 
@@ -289,8 +300,6 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         if (gm->m_recordGameplay && !m_fromRefresh) {
             gm->m_everyPlaySetup = true;
         }
-
-        CCTextInputNode::create(200.f, 50.f, "Temp", "Thonburi", 0x18, "bigFont.fnt");
 
         // 13
         // lol?
@@ -342,7 +351,9 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         m_fields->threadPool.join();
 
-        BLAZE_TIMER_STEP("Ensure FMOD is initialized");
+        CCTextInputNode::create(200.f, 50.f, "Temp", "Thonburi", 0x18, "bigFont.fnt");
+
+        BLAZE_TIMER_STEP("Ensure FMOD is initialized & final tests");
         auto fae = HookedFMODAudioEngine::get();
 
         {
