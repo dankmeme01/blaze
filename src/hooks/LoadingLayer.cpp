@@ -151,7 +151,7 @@ static CCBMFontConfiguration* loadFontConfiguration(const char* name) {
 #include <Geode/modify/LoadingLayer.hpp>
 class $modify(MyLoadingLayer, LoadingLayer) {
     struct Fields {
-        asp::ThreadPool threadPool{20};
+        asp::ThreadPool threadPool{std::thread::hardware_concurrency()};
         bool finishedLoading = false;
         std::chrono::high_resolution_clock::time_point startedLoadingGame;
         std::chrono::high_resolution_clock::time_point startedLoadingAssets;
