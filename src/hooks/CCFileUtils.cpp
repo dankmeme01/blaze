@@ -4,7 +4,6 @@
 
 #ifdef GEODE_IS_ANDROID
 
-#include <Geode/modify/CCFileUtilsAndroid.hpp>
 #include <mutex>
 
 using namespace geode::prelude;

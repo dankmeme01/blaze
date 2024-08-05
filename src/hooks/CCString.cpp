@@ -9,7 +9,7 @@
 using namespace geode::prelude;
 
 static bool initHook(CCString* self, const char* format, va_list args) {
-    ZoneScoped;
+    ZoneScopedN("CCString::initWithFormatAndValist");
 
     int size = std::vsnprintf(nullptr, 0, format, args);
 

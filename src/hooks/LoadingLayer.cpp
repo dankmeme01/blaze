@@ -122,6 +122,8 @@ static void asyncAddSpriteFrames(const char* fullPlistGuess, const char* plist, 
 
 // Note: Releases the image
 static CCTexture2D* addTexture(CCImage* image, const gd::string& sheetName) {
+    ZoneScoped;
+
     auto texture = new CCTexture2D();
     if (!texture->initWithImage(image)) {
         delete texture;
@@ -310,8 +312,6 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         BLAZE_TIMER_STEP("Main thread tasks");
 
         while (true) {
-            ZoneScopedN("tasks");
-
             if (mainThreadQueue.empty()) {
                 if (m_fields->threadPool.isDoingWork()) {
                     std::this_thread::yield();
@@ -324,7 +324,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             auto thing = mainThreadQueue.popNow();
             std::visit(makeVisitor {
                 [&](const MTTextureInitTask& task) {
-                    ZoneScopedN("texture init task");
+                    ZoneScopedN("Texture init task");
 
                     CCTexture2D* texture = addTexture(task.img, task.sheetName);
                     if (!texture) {
@@ -344,6 +344,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
                     }
                 },
                 [&](const LoadCustomTask& task) {
+                    ZoneScopedN("Custom task");
+
                     task.func();
                 }
             }, thing);

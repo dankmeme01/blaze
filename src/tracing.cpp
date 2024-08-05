@@ -2,12 +2,14 @@
 
 #ifdef BLAZE_TRACY
 #include <TracyOpenGL.hpp>
+class GLFWwindow;
 #include <Geode/Modify.hpp>
 
 using namespace geode::prelude;
 
 // A lot of this was taken from algebradash <3
 
+#ifdef GEODE_IS_WINDOWS
 class $modify(CCEGLView) {
     bool initGlew() {
         ZoneScopedN("CCEGLView::initGlew");
@@ -23,7 +25,7 @@ class $modify(CCEGLView) {
         FrameMark;
     }
 };
-
+#endif
 
 #define PROFILER_HOOK_3(Ret_, Class_, Name_) class GEODE_CRTP2(GEODE_CONCAT(profilerHook, __LINE__), Class_) { \
     Ret_ Name_() { ZoneScopedN(#Class_ "::" #Name_); return Class_::Name_(); } };
@@ -52,7 +54,8 @@ class $modify(CCEGLView) {
 
 #define PROFILER_HOOK(...) GEODE_INVOKE(GEODE_CONCAT(PROFILER_HOOK_, GEODE_NUMBER_OF_ARGS(__VA_ARGS__)), __VA_ARGS__)
 
-PROFILER_HOOK(void, CCEGLView, pollEvents);
+
+GEODE_WINDOWS(PROFILER_HOOK(void, CCEGLView, pollEvents));
 PROFILER_HOOK(void, CCDirector, drawScene);
 PROFILER_HOOK(void, CCDirector, setNextScene);
 
@@ -169,6 +172,7 @@ PROFILER_HOOK(CCLabelBMFont*, CCLabelBMFont, create, const char*, const char*, f
 PROFILER_HOOK(bool, GameManager, init)
 PROFILER_HOOK(bool, GameLevelManager, init);
 PROFILER_HOOK(bool, CCTexture2D, initWithImage, CCImage*)
+PROFILER_HOOK(bool, CCTexture2D, initWithData, const void*, CCTexture2DPixelFormat, unsigned int, unsigned int, const CCSize&);
 PROFILER_HOOK(bool, CCSpriteBatchNode, initWithTexture, CCTexture2D*, unsigned int)
 PROFILER_HOOK(bool, CCSprite, initWithTexture, CCTexture2D*, const CCRect&, bool)
 
