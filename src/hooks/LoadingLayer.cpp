@@ -273,7 +273,8 @@ static std::vector<AsyncImageLoadRequest> getGameResources() {
 #undef MAKE_IMG
 #undef MAKE_FONT
 
-static hclock::time_point g_launchTime{};
+static hclock::time_point g_launchTime = hclock::now(); // right when the binary is loaded
+static hclock::time_point g_ccApplicationRunTime{};
 static std::optional<asp::ThreadPool> s_loadThreadPool{};
 
 struct PreLoadStageData {
@@ -296,8 +297,8 @@ struct GameLoadStageData {
     }
 };
 
-static PreLoadStageData s_preLoadStage;
-static GameLoadStageData s_gameLoadStage;
+static PreLoadStageData g_preLoadStage;
+static GameLoadStageData g_gameLoadStage;
 
 template <bool SkipLoadImage = false>
 static void asyncLoadLoadingLayerResources(std::vector<AsyncImageLoadRequest>&& resources) {
@@ -318,23 +319,23 @@ static void asyncLoadLoadingLayerResources(std::vector<AsyncImageLoadRequest>&& 
             if (!res) {
                 log::warn("Error loading {}: {}", item.pngFile ? item.pngFile : "<null>", res.unwrapErr());
             } else {
-                s_preLoadStage.channel->push(std::move(item));
+                g_preLoadStage.channel->push(std::move(item));
             }
         }
 
         stopToken.stop();
     });
-    s_preLoadStage.thread.emplace(std::move(thread));
-    s_preLoadStage.channel = std::make_unique<asp::Channel<AsyncImageLoadRequest>>();
-    s_preLoadStage.thread->start(std::move(resources));
+    g_preLoadStage.thread.emplace(std::move(thread));
+    g_preLoadStage.channel = std::make_unique<asp::Channel<AsyncImageLoadRequest>>();
+    g_preLoadStage.thread->start(std::move(resources));
 }
 
 template <bool SkipLoadImage = false>
 static void asyncLoadGameResources(std::vector<AsyncImageLoadRequest>&& resources) {
-    s_gameLoadStage.requests = std::move(resources);
-    s_gameLoadStage.channel = std::make_unique<asp::Channel<AsyncImageLoadRequest*>>();
+    g_gameLoadStage.requests = std::move(resources);
+    g_gameLoadStage.channel = std::make_unique<asp::Channel<AsyncImageLoadRequest*>>();
 
-    for (auto& img : s_gameLoadStage.requests) {
+    for (auto& img : g_gameLoadStage.requests) {
         s_loadThreadPool->pushTask([&img] {
             Result<> res;
 
@@ -350,7 +351,7 @@ static void asyncLoadGameResources(std::vector<AsyncImageLoadRequest>&& resource
             if (!res) {
                 log::warn("Error loading {}: {}", img.pngFile, res.unwrapErr());
             } else {
-                s_gameLoadStage.channel->push(&img);
+                g_gameLoadStage.channel->push(&img);
             }
         });
     }
@@ -403,16 +404,16 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         auto* sfcache = CCSpriteFrameCache::get();
 
         while (true) {
-            if (s_preLoadStage.channel->empty()) {
-                if (!s_preLoadStage.thread->isStopped()) {
+            if (g_preLoadStage.channel->empty()) {
+                if (!g_preLoadStage.thread->isStopped()) {
                     std::this_thread::yield();
                     continue;
-                } else if (s_preLoadStage.channel->empty()) {
+                } else if (g_preLoadStage.channel->empty()) {
                     break;
                 }
             }
 
-            auto iTask = s_preLoadStage.channel->popNow();
+            auto iTask = g_preLoadStage.channel->popNow();
             auto res = iTask.initTexture();
             if (!res) {
                 log::warn("Failed to init texture for {}: {}", iTask.pngFile, res.unwrapErr());
@@ -497,16 +498,16 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         BLAZE_TIMER_STEP("Main thread tasks");
 
         while (true) {
-            if (s_gameLoadStage.channel->empty()) {
+            if (g_gameLoadStage.channel->empty()) {
                 if (!s_loadThreadPool->isDoingWork()) {
                     std::this_thread::yield();
                     continue;
-                } else if (s_gameLoadStage.channel->empty()) {
+                } else if (g_gameLoadStage.channel->empty()) {
                     break;
                 }
             }
 
-            auto iTask = s_gameLoadStage.channel->popNow();
+            auto iTask = g_gameLoadStage.channel->popNow();
             auto res = iTask->initTexture();
             if (!res) {
                 log::warn("Failed to init texture for {}: {}", iTask->pngFile, res.unwrapErr());
@@ -536,8 +537,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         // cleanup in another thread because it can block for a few ms
         std::thread([] {
-            s_preLoadStage.cleanup();
-            s_gameLoadStage.cleanup();
+            g_preLoadStage.cleanup();
+            g_gameLoadStage.cleanup();
             s_loadThreadPool.reset();
         }).detach();
 
@@ -563,8 +564,10 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         log::info("Loading took {}, handing off..", formatDuration(tookTimeFull));
 
 #ifdef BLAZE_DEBUG
-        log::debug("- Initial game setup: {}", formatDuration(m_fields->startedLoadingGame - g_launchTime));
+        log::debug("- Geode entry remainder: {}", formatDuration(g_ccApplicationRunTime - g_launchTime));
+        log::debug("- Initial game setup: {}", formatDuration(m_fields->startedLoadingGame - g_ccApplicationRunTime));
         log::debug("- Pre-loading: {}", formatDuration(m_fields->finishedLoadingGame - m_fields->startedLoadingGame));
+        log::debug("- Delay before asset loading: {}", formatDuration(m_fields->startedLoadingAssets - m_fields->finishedLoadingGame));
         log::debug("- Asset loading: {}", formatDuration(finishTime - m_fields->startedLoadingAssets));
 #endif
 
@@ -651,7 +654,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 class $modify(CCApplication) {
     int run() override {
         BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
-        g_launchTime = hclock::now();
+        g_ccApplicationRunTime = hclock::now();
 
         CCFileUtils::get()->addSearchPath("Resources");
 
