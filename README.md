@@ -24,5 +24,5 @@ Note: all those numbers are on Windows. On other operating systems, the performa
 
 ## Credit
 
-* [matcool](https://github.com/matcool) for [Fast Format](https://github.com/matcool/geode-mods/blob/main/fast-format/main.cpp)
-* [cgytrus](https://github.com/cgytrus) for [Algebra Dash](https://github.com/cgytrus/AlgebraDash)
+* [matcool](https://github.com/matcool) for [Fast Format](https://github.com/matcool/geode-mods/blob/main/fast-format/main.cpp) (i took the entire mod)
+* [cgytrus](https://github.com/cgytrus) for [Algebra Dash](https://github.com/cgytrus/AlgebraDash) (Tracy integration taken from it, the rest of the optimizations were implemented by myself, even if the ideas are similar to ones in Config's mod)

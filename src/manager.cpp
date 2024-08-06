@@ -79,6 +79,17 @@ std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSi
     return std::unique_ptr<uint8_t[]>(buf);
 }
 
+blaze::OwnedMemoryChunk LoadManager::readFileToChunk(const char* path) {
+    size_t outSize;
+    auto ptr = this->readFile(path, outSize);
+
+    if (ptr) {
+        return blaze::OwnedMemoryChunk{std::move(ptr), outSize};
+    } else {
+        return {};
+    }
+}
+
 void LoadManager::threadFunc(decltype(converterThread)::StopToken& st) {
     auto tasko = converterQueue.popTimeout(std::chrono::seconds(1));
 

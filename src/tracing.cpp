@@ -1,6 +1,7 @@
 #include "tracing.hpp"
 
 #ifdef BLAZE_TRACY
+
 #include <TracyOpenGL.hpp>
 class GLFWwindow;
 #include <Geode/Modify.hpp>
@@ -237,5 +238,8 @@ PROFILER_HOOK(void, CCLabelBMFont, updateLabel)
 PROFILER_HOOK(void, CCNode, update, float)
 PROFILER_HOOK(void, CCNode, visit)
 PROFILER_HOOK(void, CCNode, updateTransform)
+
+PROFILER_HOOK(int, CCApplication, run)
+GEODE_WINDOWS(PROFILER_HOOK(void, AppDelegate, setupGLView))
 
 #endif // BLAZE_TRACY

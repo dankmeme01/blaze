@@ -1,8 +1,10 @@
 // Blaze LoadingLayer hooks.
 //
-// Completely rewrites `LoadingLayer::loadAssets` to be multi-threaded.
+// Completely rewrites the loading logic to be multithreaded.
 
 #include <Geode/Geode.hpp>
+#include <Geode/modify/LoadingLayer.hpp>
+#include <Geode/modify/CCApplication.hpp>
 
 #include <asp/sync/Mutex.hpp>
 #include <asp/thread/ThreadPool.hpp>
@@ -15,6 +17,10 @@
 #include <tracing.hpp>
 
 using namespace geode::prelude;
+using hclock = std::chrono::high_resolution_clock;
+
+// mutexes for thread unsafe classes
+static asp::Mutex<> texCacheMutex, sfcacheMutex;
 
 // big hack to call a private cocos function
 namespace {
@@ -34,129 +40,328 @@ namespace {
     void _addSpriteFramesWithDictionary(CCDictionary* p1, CCTexture2D* p2);
 }
 
-struct MTTextureInitTask {
-    std::string sheetName;
-    CCImage* img;
-    const char* plistToLoad = nullptr;
-    std::string plistFullPathToLoad;
+// AsyncImageLoadRequest - structure that handles the loading of a specific texture
+namespace {
+struct AsyncImageLoadRequest {
+    const char* pngFile = nullptr;
+    const char* plistFile = nullptr;
+    gd::string pathKey;
+    blaze::OwnedMemoryChunk imageData{};
+    Ref<CCImage> image = nullptr;
+    Ref<CCTexture2D> texture = nullptr;
+
+    AsyncImageLoadRequest(const char* pngFile, const char* plistFile) : pngFile(pngFile), plistFile(plistFile) {}
+    AsyncImageLoadRequest(const char* pngFile) : pngFile(pngFile), plistFile(nullptr) {}
+
+    AsyncImageLoadRequest(const AsyncImageLoadRequest&) = delete;
+    AsyncImageLoadRequest& operator=(const AsyncImageLoadRequest&) = delete;
+
+    AsyncImageLoadRequest(AsyncImageLoadRequest&& other) {
+        this->pngFile = other.pngFile;
+        this->plistFile = other.plistFile;
+        this->pathKey = std::move(other.pathKey);
+        this->imageData = std::move(other.imageData);
+        this->image = std::move(other.image);
+        this->texture = std::move(other.texture);
+
+        other.pngFile = nullptr;
+        other.plistFile = nullptr;
+    }
+
+    AsyncImageLoadRequest& operator=(AsyncImageLoadRequest&& other) {
+        if (this != &other) {
+            this->pngFile = other.pngFile;
+            this->plistFile = other.plistFile;
+            this->pathKey = std::move(other.pathKey);
+            this->imageData = std::move(other.imageData);
+            this->image = std::move(other.image);
+            this->texture = std::move(other.texture);
+
+            other.pngFile = nullptr;
+            other.plistFile = nullptr;
+        }
+
+        return *this;
+    }
+
+    // Loads the encoded image data into memory. Does nothing if the image is already loaded.
+    inline Result<> loadImage() {
+        ZoneScoped;
+
+        if (imageData) return Ok();
+
+        this->pathKey = CCFileUtils::get()->fullPathForFilename(pngFile, false);
+        if (pathKey.empty()) {
+            return Err(fmt::format("Failed to find path for image {}", pngFile));
+        }
+
+        this->imageData = LoadManager::get().readFileToChunk(pathKey.c_str());
+
+        if (!imageData || imageData.size == 0) {
+            return Err(fmt::format("Failed to open image file at {}", pathKey));
+        }
+
+        return Ok();
+    }
+
+    bool isImageLoaded() {
+        return this->imageData;
+    }
+
+    inline Result<> initImage() {
+        ZoneScoped;
+
+        if (!imageData) return Err("attempting to initialize an image that hasn't been loaded yet");
+
+        this->image = new CCImage();
+        this->image->release(); // make refcount go to 1
+        auto ret = static_cast<blaze::CCImageExt*>(this->image.data())->initWithSPNGOrCache(imageData, pathKey.c_str());
+
+        if (!ret) {
+            this->image = nullptr;
+            return Err(fmt::format("Failed to load image: {}", ret.unwrapErr()));
+        }
+
+        return Ok();
+    }
+
+    bool isImageInitialized() {
+        return this->image != nullptr;
+    }
+
+    // Initializes the opengl texture from the loaded image. Must be called on the main thread
+    inline Result<> initTexture() {
+        ZoneScoped;
+
+        if (!image) return Err("attempting to initialize a texture before initializing an image");
+
+        this->texture = new CCTexture2D();
+        this->texture->release(); // make refcount go to 1
+
+        if (!texture->initWithImage(image)) {
+            this->image = nullptr;
+            this->texture = nullptr;
+            return Err("failed to initialize cctexture2d");;
+        }
+
+        auto _lck = texCacheMutex.lock();
+        CCTextureCache::get()->m_pTextures->setObject(texture, pathKey);
+
+        return Ok();
+    }
+
+    bool isTextureLoaded() {
+        return this->texture != nullptr;
+    }
+
+    // Adds sprite frames given the plist file. Does nothing if plist file is nullptr.
+    inline void addSpriteFramesSync() const {
+        if (!plistFile) return;
+        if (!texture) return;
+
+        auto _g = sfcacheMutex.lock();
+        CCSpriteFrameCache::get()->addSpriteFramesWithFile(plistFile, texture);
+    }
+
+    // Async version of addSpriteFramesSync
+    inline void addSpriteFramesAsync(TextureQuality texQuality) const {
+        if (!plistFile) return;
+        if (!texture) return;
+
+        ZoneScoped;
+
+        // try to guess the full plist name without calling fullPathForFilename
+        auto pfsv = std::string_view(plistFile);
+
+        // strip .plist extension
+        std::string plistPath;
+        plistPath.reserve(pfsv.size() - sizeof(".plist") + sizeof("-uhd.plist"));
+        plistPath.append(pfsv.substr(0, pfsv.size() - sizeof(".plist")));
+
+        switch (texQuality) {
+            case cocos2d::kTextureQualityLow:
+                plistPath.append(std::string_view(".plist")); break;
+            case cocos2d::kTextureQualityMedium:
+                plistPath.append(std::string_view("-hd.plist")); break;
+            case cocos2d::kTextureQualityHigh:
+                plistPath.append(std::string_view("-uhd.plist")); break;
+        }
+
+        CCDictionary* dict;
+
+        {
+            ZoneScopedN("asyndAddSpriteFrames ccdict");
+
+            dict = CCDictionary::createWithContentsOfFileThreadSafe(plistPath.c_str());
+
+            if (!dict) {
+                plistPath = CCFileUtils::get()->fullPathForFilename(plistFile, false);
+                dict = CCDictionary::createWithContentsOfFileThreadSafe(plistPath.c_str());
+            }
+
+            if (!dict) {
+                log::warn("failed to find the plist for {}", plistFile);
+                auto _mtx = texCacheMutex.lock();
+                CCTextureCache::get()->m_pTextures->removeObjectForKey(pathKey);
+                return;
+            }
+        }
+
+        {
+            ZoneScopedN("addSpriteFramesAsync call to addSpriteFramesWithDictionary");
+            auto _lck = sfcacheMutex.lock();
+            _addSpriteFramesWithDictionary(dict, texture);
+        }
+
+        dict->release();
+    }
+};
+}
+
+#define MAKE_SHEET(name) textures.push_back(AsyncImageLoadRequest { name".png", name".plist" })
+#define MAKE_IMG(name) textures.push_back(AsyncImageLoadRequest { name".png" })
+#define MAKE_FONT(name) do { \
+        auto conf = FNTConfigLoadFile(name".fnt"); \
+        if (conf) textures.push_back(AsyncImageLoadRequest { conf->getAtlasName() }); \
+        else geode::log::warn("Failed to load font file: " name ".fnt"); \
+    } while (0)
+
+static std::vector<AsyncImageLoadRequest> getLoadingLayerResources() {
+    std::vector<AsyncImageLoadRequest> textures;
+    MAKE_SHEET("GJ_LaunchSheet");
+    MAKE_IMG("game_bg_01_001");
+    MAKE_IMG("slidergroove");
+    MAKE_IMG("sliderBar");
+    MAKE_FONT("goldFont");
+    return textures;
+}
+
+static std::vector<AsyncImageLoadRequest> getGameResources() {
+    std::vector<AsyncImageLoadRequest> textures;
+    MAKE_SHEET("GJ_GameSheet");
+    MAKE_SHEET("GJ_GameSheet02");
+    MAKE_SHEET("GJ_GameSheet03");
+    MAKE_SHEET("GJ_GameSheetEditor");
+    MAKE_SHEET("GJ_GameSheet04");
+    MAKE_SHEET("GJ_GameSheetGlow");
+
+    MAKE_SHEET("FireSheet_01");
+    MAKE_SHEET("GJ_ShopSheet");
+    MAKE_IMG("smallDot");
+    MAKE_IMG("square02_001");
+    MAKE_SHEET("GJ_ParticleSheet");
+    MAKE_SHEET("PixelSheet_01");
+
+    MAKE_SHEET("CCControlColourPickerSpriteSheet");
+    MAKE_IMG("GJ_gradientBG");
+    MAKE_IMG("edit_barBG_001");
+    MAKE_IMG("GJ_button_01");
+    MAKE_IMG("slidergroove2");
+
+    MAKE_IMG("GJ_square01");
+    MAKE_IMG("GJ_square02");
+    MAKE_IMG("GJ_square03");
+    MAKE_IMG("GJ_square04");
+    MAKE_IMG("GJ_square05");
+    MAKE_IMG("gravityLine_001");
+
+    MAKE_FONT("bigFont");
+    MAKE_FONT("chatFont");
+    return textures;
+}
+#undef MAKE_SHEET
+#undef MAKE_IMG
+#undef MAKE_FONT
+
+static hclock::time_point g_launchTime{};
+static std::optional<asp::ThreadPool> s_loadThreadPool{};
+
+struct PreLoadStageData {
+    std::optional<asp::Thread<std::vector<AsyncImageLoadRequest>>> thread;
+    std::unique_ptr<asp::Channel<AsyncImageLoadRequest>> channel;
+
+    void cleanup() {
+        thread.reset();
+        channel.reset();
+    }
 };
 
-static asp::Mutex<> texCacheMutex;
-static asp::Mutex<> sfcacheMutex;
+struct GameLoadStageData {
+    std::vector<AsyncImageLoadRequest> requests;
+    std::unique_ptr<asp::Channel<AsyncImageLoadRequest*>> channel;
 
-static std::optional<MTTextureInitTask> asyncLoadImage(const char* sheet, const char* plistToLoad) {
-    ZoneScoped;
-
-    auto pathKey = CCFileUtils::get()->fullPathForFilename(sheet, false);
-    if (pathKey.empty()) {
-        log::warn("Failed to find: {}", sheet);
-        return std::nullopt;
+    void cleanup() {
+        requests.clear();
+        channel.reset();
     }
+};
 
-    auto _l = texCacheMutex.lock();
-    if (CCTextureCache::get()->m_pTextures->objectForKey(pathKey)) {
-        log::warn("Already loaded: {}", pathKey);
-        return std::nullopt;
-    }
-    _l.unlock();
+static PreLoadStageData s_preLoadStage;
+static GameLoadStageData s_gameLoadStage;
 
-    size_t dataSize;
-    auto data = LoadManager::get().readFile(pathKey.c_str(), dataSize);
+template <bool SkipLoadImage = false>
+static void asyncLoadLoadingLayerResources(std::vector<AsyncImageLoadRequest>&& resources) {
+    asp::Thread<std::vector<AsyncImageLoadRequest>> thread;
+    thread.setLoopFunction([](std::vector<AsyncImageLoadRequest>& items, auto& stopToken) {
+        for (auto& item : items) {
+            Result<> res;
 
-    if (!data || dataSize == 0) {
-        log::warn("Failed to open: {}", pathKey);
-        return std::nullopt;
-    }
+            if constexpr (!SkipLoadImage) {
+                res = item.loadImage();
+                if (!res) {
+                    log::warn("Error loading {}: {}", item.pngFile ? item.pngFile : "<null>", res.unwrapErr());
+                    return;
+                }
+            }
 
-    auto img = new CCImage();
-    auto ret = static_cast<blaze::CCImageExt*>(img)->initWithSPNGOrCache(data.get(), dataSize, pathKey.c_str());
-
-    if (!ret) {
-        img->release();
-        log::error("Failed to load image {}: {}", sheet, ret.unwrapErr());
-        return std::nullopt;
-    }
-
-    std::string_view pksv(pathKey);
-
-    return MTTextureInitTask {
-        .sheetName = std::move(pathKey),
-        .img = img,
-        .plistToLoad = plistToLoad,
-        // oh the horrors
-        .plistFullPathToLoad = plistToLoad ? (std::string(pksv.substr(0, pksv.find(".png"))) + ".plist") : ""
-    };
-}
-
-static void asyncAddSpriteFrames(const char* fullPlistGuess, const char* plist, CCTexture2D* texture, const std::string& sheetName) {
-    ZoneScoped;
-
-    CCDictionary* dict;
-
-    {
-        ZoneScopedN("asyndAddSpriteFrames ccdict");
-
-        dict = CCDictionary::createWithContentsOfFileThreadSafe(fullPlistGuess);
-
-        if (!dict) {
-            dict = CCDictionary::createWithContentsOfFileThreadSafe(CCFileUtils::get()->fullPathForFilename(plist, false).c_str());
+            res = item.initImage();
+            if (!res) {
+                log::warn("Error loading {}: {}", item.pngFile ? item.pngFile : "<null>", res.unwrapErr());
+            } else {
+                s_preLoadStage.channel->push(std::move(item));
+            }
         }
 
-        if (!dict) {
-            log::warn("failed to find the plist for {}", plist);
-            auto _mtx = texCacheMutex.lock();
-            CCTextureCache::get()->m_pTextures->removeObjectForKey(sheetName);
-            return;
-        }
-    }
-
-    {
-        ZoneScopedN("asyncAddSpriteFrames addSpriteFrames");
-        auto _lastlck = sfcacheMutex.lock();
-        _addSpriteFramesWithDictionary(dict, texture);
-        _lastlck.unlock();
-    }
-
-    dict->release();
+        stopToken.stop();
+    });
+    s_preLoadStage.thread.emplace(std::move(thread));
+    s_preLoadStage.channel = std::make_unique<asp::Channel<AsyncImageLoadRequest>>();
+    s_preLoadStage.thread->start(std::move(resources));
 }
 
-// Note: Releases the image
-static CCTexture2D* addTexture(CCImage* image, const gd::string& sheetName) {
-    ZoneScoped;
+template <bool SkipLoadImage = false>
+static void asyncLoadGameResources(std::vector<AsyncImageLoadRequest>&& resources) {
+    s_gameLoadStage.requests = std::move(resources);
+    s_gameLoadStage.channel = std::make_unique<asp::Channel<AsyncImageLoadRequest*>>();
 
-    auto texture = new CCTexture2D();
-    if (!texture->initWithImage(image)) {
-        delete texture;
-        image->release();
-        log::warn("failed to init cctexture2d: {}", image);
-        return nullptr;
+    for (auto& img : s_gameLoadStage.requests) {
+        s_loadThreadPool->pushTask([&img] {
+            Result<> res;
+
+            if constexpr (!SkipLoadImage) {
+                res = img.loadImage();
+                if (!res) {
+                    log::warn("Error loading {}: {}", img.pngFile, res.unwrapErr());
+                    return;
+                }
+            }
+
+            res = img.initImage();
+            if (!res) {
+                log::warn("Error loading {}: {}", img.pngFile, res.unwrapErr());
+            } else {
+                s_gameLoadStage.channel->push(&img);
+            }
+        });
     }
-
-    auto _lck = texCacheMutex.lock();
-    CCTextureCache::get()->m_pTextures->setObject(texture, sheetName);
-    _lck.unlock();
-
-    texture->release();
-    image->release();
-
-    return texture;
 }
 
-// Note: not thread safe
-static CCBMFontConfiguration* loadFontConfiguration(const char* name) {
-    ZoneScoped;
-
-    // CCLabelBMFont::create(" ", name);
-    return FNTConfigLoadFile(name);
-}
-
-#include <Geode/modify/LoadingLayer.hpp>
 class $modify(MyLoadingLayer, LoadingLayer) {
     struct Fields {
-        asp::ThreadPool threadPool{std::thread::hardware_concurrency()};
         bool finishedLoading = false;
-        std::chrono::high_resolution_clock::time_point startedLoadingGame;
-        std::chrono::high_resolution_clock::time_point startedLoadingAssets;
+        hclock::time_point startedLoadingGame;
+        hclock::time_point finishedLoadingGame;
+        hclock::time_point startedLoadingAssets;
     };
 
     static void onModify(auto& self) {
@@ -164,15 +369,77 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         BLAZE_HOOK_VERY_LAST(LoadingLayer::init); // idk geode was crashin without this
     }
 
-    // this will eventually get called by geode
-    $override
-    void loadAssets() {
-        if (m_fields->finishedLoading) {
-            m_loadStep = 14;
-            LoadingLayer::loadAssets();
-        } else {
-            this->customLoadStep();
+    bool init(bool fromReload) {
+        m_fields->startedLoadingGame = hclock::now();
+
+        BLAZE_TIMER_START("(LoadingLayer::init) Initial setup");
+
+        if (!CCLayer::init()) return false;
+
+        this->m_fromRefresh = fromReload;
+        CCDirector::get()->m_bDisplayStats = true;
+
+        if (fromReload) {
+            // Load loadinglayer assets
+            asyncLoadLoadingLayerResources(getLoadingLayerResources());
         }
+
+        // FMOD is setup here on android
+#ifdef GEODE_IS_ANDROID
+        if (!fromReload) {
+            FMODAudioEngine::get()->setup();
+        }
+#endif
+
+        auto* gm = GameManager::get();
+        if (gm->m_switchModes) {
+            gm->m_switchModes = false;
+            GameLevelManager::get()->getLevelSaveData();
+        }
+
+        // Initialize textures
+        BLAZE_TIMER_STEP("Main thread tasks");
+
+        auto* sfcache = CCSpriteFrameCache::get();
+
+        while (true) {
+            if (s_preLoadStage.channel->empty()) {
+                if (!s_preLoadStage.thread->isStopped()) {
+                    std::this_thread::yield();
+                    continue;
+                } else if (s_preLoadStage.channel->empty()) {
+                    break;
+                }
+            }
+
+            auto iTask = s_preLoadStage.channel->popNow();
+            auto res = iTask.initTexture();
+            if (!res) {
+                log::warn("Failed to init texture for {}: {}", iTask.pngFile, res.unwrapErr());
+                continue;
+            }
+
+            iTask.addSpriteFramesSync();
+        }
+
+        BLAZE_TIMER_STEP("LoadingLayer UI");
+
+        this->addLoadingLayerUi();
+
+        auto* acm = CCDirector::get()->getActionManager();
+        auto action = CCSequence::create(
+            CCDelayTime::create(0.f),
+            CCCallFunc::create(this, callfunc_selector(MyLoadingLayer::customLoadStep)),
+            nullptr
+        );
+
+        acm->addAction(action, this, false);
+
+        m_fields->finishedLoadingGame = hclock::now();
+
+        BLAZE_TIMER_END();
+
+        return true;
     }
 
     void customLoadStep() {
@@ -180,103 +447,21 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         BLAZE_TIMER_START("(customLoadStep) Task queueing");
 
-        m_fields->startedLoadingAssets = std::chrono::high_resolution_clock::now();
+        m_fields->startedLoadingAssets = hclock::now();
 
         auto tcache = CCTextureCache::get();
         auto sfcache = CCSpriteFrameCache::get();
 
-        struct LoadSheetTask {
-            const char *sheet, *plist;
-        };
+        // If it's a refresh, queue all resources to be loaded
 
-        struct LoadImageTask {
-            const char *image;
-        };
+        if (m_fromRefresh) {
+            auto resources = getGameResources();
+            asyncLoadGameResources(std::move(resources));
+        }
 
-        struct LoadFontTask {
-            CCBMFontConfiguration* configuration;
-        };
-
-        struct LoadCustomTask {
-            std::function<void()> func;
-        };
-
-        using PreloadTask = std::variant<LoadSheetTask, LoadImageTask, LoadFontTask, LoadCustomTask>;
-
-        using MainThreadTask = std::variant<MTTextureInitTask, LoadCustomTask>;
-
-        std::vector<PreloadTask> tasks;
-        std::vector<MainThreadTask> mtTasks;
-
-#define MAKE_LOADSHEET(name) tasks.push_back(LoadSheetTask { .sheet = name".png", .plist = name".plist" })
-#define MAKE_LOADIMG(name) tasks.push_back(LoadImageTask { .image = name".png" })
-#define MAKE_LOADFONT(name) tasks.push_back(LoadFontTask { .configuration = loadFontConfiguration(name) })
-#define MAKE_LOADCUSTOM(ft) tasks.push_back(LoadCustomTask { .func = [&] ft })
-
-        MAKE_LOADSHEET("GJ_GameSheet");
-        MAKE_LOADSHEET("GJ_GameSheet02");
-        MAKE_LOADSHEET("GJ_GameSheet03");
-        MAKE_LOADSHEET("GJ_GameSheetEditor");
-        MAKE_LOADSHEET("GJ_GameSheet04");
-        MAKE_LOADSHEET("GJ_GameSheetGlow");
-
-        MAKE_LOADSHEET("FireSheet_01");
-        MAKE_LOADSHEET("GJ_ShopSheet");
-        MAKE_LOADIMG("smallDot");
-        MAKE_LOADIMG("square02_001");
-        MAKE_LOADSHEET("GJ_ParticleSheet");
-        MAKE_LOADSHEET("PixelSheet_01");
-
-        MAKE_LOADSHEET("CCControlColourPickerSpriteSheet");
-        MAKE_LOADIMG("GJ_gradientBG");
-        MAKE_LOADIMG("edit_barBG_001");
-        MAKE_LOADIMG("GJ_button_01");
-        MAKE_LOADIMG("slidergroove2");
-
-        MAKE_LOADIMG("GJ_square01");
-        MAKE_LOADIMG("GJ_square02");
-        MAKE_LOADIMG("GJ_square03");
-        MAKE_LOADIMG("GJ_square04");
-        MAKE_LOADIMG("GJ_square05");
-        MAKE_LOADIMG("gravityLine_001");
-
-        MAKE_LOADCUSTOM({
-            ZoneScopedN("ObjectToolbox::sharedState");
-
+        s_loadThreadPool->pushTask([] {
             ObjectToolbox::sharedState();
         });
-
-        MAKE_LOADFONT("chatFont.fnt");
-        MAKE_LOADFONT("bigFont.fnt");
-
-        // Push all the threaded tasks to the threadpool
-        static asp::Channel<MainThreadTask> mainThreadQueue;
-
-        for (auto& task : tasks) {
-            m_fields->threadPool.pushTask([&, task = std::move(task)] {
-                // do stuff..
-                std::visit(makeVisitor {
-                    [&](const LoadSheetTask& task) {
-                        if (auto res = asyncLoadImage(task.sheet, task.plist)) {
-                            mainThreadQueue.push(std::move(res.value()));
-                        }
-                    },
-                    [&](const LoadImageTask& task) {
-                        if (auto res = asyncLoadImage(task.image, nullptr)) {
-                            mainThreadQueue.push(std::move(res.value()));
-                        }
-                    },
-                    [&](const LoadFontTask& task) {
-                        if (auto res = asyncLoadImage(task.configuration->getAtlasName(), nullptr)) {
-                            mainThreadQueue.push(std::move(res.value()));
-                        }
-                    },
-                    [&](const LoadCustomTask& task) {
-                        task.func();
-                    },
-                }, task);
-            });
-        }
 
         BLAZE_TIMER_STEP("ObjectManager::setup");
 
@@ -312,139 +497,83 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         BLAZE_TIMER_STEP("Main thread tasks");
 
         while (true) {
-            if (mainThreadQueue.empty()) {
-                if (m_fields->threadPool.isDoingWork()) {
+            if (s_gameLoadStage.channel->empty()) {
+                if (!s_loadThreadPool->isDoingWork()) {
                     std::this_thread::yield();
                     continue;
-                } else if (mainThreadQueue.empty()) {
+                } else if (s_gameLoadStage.channel->empty()) {
                     break;
                 }
             }
 
-            auto thing = mainThreadQueue.popNow();
-            std::visit(makeVisitor {
-                [&](const MTTextureInitTask& task) {
-                    ZoneScopedN("Texture init task");
+            auto iTask = s_gameLoadStage.channel->popNow();
+            auto res = iTask->initTexture();
+            if (!res) {
+                log::warn("Failed to init texture for {}: {}", iTask->pngFile, res.unwrapErr());
+                continue;
+            }
 
-                    CCTexture2D* texture = addTexture(task.img, task.sheetName);
-                    if (!texture) {
-                        return;
-                    }
-
-                    if (task.plistToLoad) {
-                        // adding sprite frames
-                        m_fields->threadPool.pushTask([
-                            texture,
-                            plist = task.plistToLoad,
-                            fullPlist = task.plistFullPathToLoad,
-                            sheetName = task.sheetName
-                        ] {
-                            asyncAddSpriteFrames(fullPlist.c_str(), plist, texture, sheetName);
-                        });
-                    }
-                },
-                [&](const LoadCustomTask& task) {
-                    ZoneScopedN("Custom task");
-
-                    task.func();
-                }
-            }, thing);
+            if (iTask->plistFile) {
+                s_loadThreadPool->pushTask([iTask] {
+                    iTask->addSpriteFramesAsync((TextureQuality) GameManager::get()->m_texQuality);
+                });
+            }
         }
 
-        m_fields->threadPool.join();
+        BLAZE_TIMER_STEP("Wait for sprite frames");
 
-        CCTextInputNode::create(200.f, 50.f, "Temp", "Thonburi", 0x18, "bigFont.fnt");
-
-        BLAZE_TIMER_STEP("Ensure FMOD is initialized & final tests");
+        // also ensure fmod is initialized
         auto fae = HookedFMODAudioEngine::get();
-
         {
             std::lock_guard lock(fae->m_fields->initMutex);
         }
 
-        BLAZE_TIMER_END();
+        s_loadThreadPool->join();
 
-        auto tookTimeFull = std::chrono::high_resolution_clock::now() - m_fields->startedLoadingGame;
-        auto tookTimeAssets = std::chrono::high_resolution_clock::now() - m_fields->startedLoadingAssets;
-        log::info("Loading took {} (out of which assets were {}), handing off..", formatDuration(tookTimeFull), formatDuration(tookTimeAssets));
+        BLAZE_TIMER_STEP("Final cleanup");
+
+        CCTextInputNode::create(200.f, 50.f, "Temp", "Thonburi", 0x18, "bigFont.fnt");
+
+        // cleanup in another thread because it can block for a few ms
+        std::thread([] {
+            s_preLoadStage.cleanup();
+            s_gameLoadStage.cleanup();
+            s_loadThreadPool.reset();
+        }).detach();
+
+        BLAZE_TIMER_END();
 
         this->finishLoading();
     }
 
+    $override
+    void loadAssets() {
+        if (m_fields->finishedLoading) {
+            m_loadStep = 14;
+            LoadingLayer::loadAssets();
+        } else {
+            this->customLoadStep();
+        }
+    }
+
     void finishLoading() {
+        auto finishTime = hclock::now();
+
+        auto tookTimeFull = finishTime - g_launchTime;
+        log::info("Loading took {}, handing off..", formatDuration(tookTimeFull));
+
+#ifdef BLAZE_DEBUG
+        log::debug("- Initial game setup: {}", formatDuration(m_fields->startedLoadingGame - g_launchTime));
+        log::debug("- Pre-loading: {}", formatDuration(m_fields->finishedLoadingGame - m_fields->startedLoadingGame));
+        log::debug("- Asset loading: {}", formatDuration(finishTime - m_fields->startedLoadingAssets));
+#endif
+
         m_fields->finishedLoading = true;
         this->loadAssets();
     }
 
-    // init reimpl
-    bool init(bool fromReload) {
-        m_fields->startedLoadingGame = std::chrono::high_resolution_clock::now();
-
-        BLAZE_TIMER_START("(LoadingLayer::init) Initial setup");
-
-        if (!CCLayer::init()) return false;
-
-        this->m_fromRefresh = fromReload;
-        CCDirector::get()->m_bDisplayStats = true;
-        CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
-
-        // load the launchsheet and bg in another thread, as fmod setup takes a little bit, and image loading can be parallelized.
-        asp::Thread<> sheetThread;
-
-        asp::Channel<MTTextureInitTask> initTasks;
-        sheetThread.setLoopFunction([&](asp::StopToken<>& stopToken) {
-#define ASYNC_IMG(name) if (auto _t = asyncLoadImage(name, nullptr)) { initTasks.push(std::move(_t.value())); }
-#define ASYNC_SHEET(name, plist) if (auto _t = asyncLoadImage(name, plist)) { initTasks.push(std::move(_t.value())); }
-
-            ASYNC_SHEET("GJ_LaunchSheet.png", "GJ_LaunchSheet.plist");
-            ASYNC_IMG("game_bg_01_001.png");
-            ASYNC_IMG("slidergroove.png");
-            ASYNC_IMG("sliderBar.png");
-
-#undef ASYNC_IMG
-
-            stopToken.stop();
-        });
-
-        sheetThread.start();
-
-        // FMOD setup (asynchronous on Windows)
-
-        if (!fromReload) {
-            FMODAudioEngine::get()->setup();
-        }
-
-        auto* gm = GameManager::get();
-        if (gm->m_switchModes) {
-            gm->m_switchModes = false;
-            GameLevelManager::get()->getLevelSaveData();
-        }
-
-        // Continue loading launchsheet
-        BLAZE_TIMER_STEP("Launchsheet loading");
-
-        auto* sfcache = CCSpriteFrameCache::get();
-
-        while (true) {
-            if (initTasks.empty()) {
-                if (!sheetThread.isStopped()) {
-                    std::this_thread::yield();
-                    continue;
-                } else if (initTasks.empty()) {
-                    break;
-                }
-            }
-
-            auto iTask = initTasks.popNow();
-
-            addTexture(iTask.img, iTask.sheetName);
-            if (iTask.plistToLoad) {
-                sfcache->addSpriteFramesWithFile(iTask.plistToLoad);
-            }
-        }
-
-        BLAZE_TIMER_STEP("LoadingLayer UI");
-
+    // Boring stuff
+    void addLoadingLayerUi() {
         auto winSize = CCDirector::get()->getWinSize();
 
         auto bg = CCSprite::create("game_bg_01_001.png");
@@ -516,17 +645,85 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         groove->setPosition({m_caption->getPosition().x, txareaPos.y + 40.f});
 
         this->updateProgress(0);
-        auto* acm = CCDirector::get()->getActionManager();
-        auto action = CCSequence::create(
-            CCDelayTime::create(0.f),
-            CCCallFunc::create(this, callfunc_selector(MyLoadingLayer::customLoadStep)),
-            nullptr
-        );
+    }
+};
 
-        acm->addAction(action, this, false);
+class $modify(CCApplication) {
+    int run() override {
+        BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
+        g_launchTime = hclock::now();
+
+        CCFileUtils::get()->addSearchPath("Resources");
+
+        // initialize gamemanager, we have to do it on main thread right here
+        GameManager::get();
+
+        // setup fmod asynchronously
+#ifndef GEODE_IS_ANDROID
+        FMODAudioEngine::get()->setup();
+#endif
+
+        // initialize llm in another thread.
+        // we can only do this if we carefully checked that all the functions afterwards are thread-safe and do not call autorelease
+        asp::Thread<> llmLoadThread;
+        llmLoadThread.setLoopFunction([](auto& stopToken) {
+            LocalLevelManager::get();
+            stopToken.stop();
+        });
+        llmLoadThread.start();
+
+        // set appropriate texture quality
+        auto tq = GameManager::get()->m_texQuality;
+        CCDirector::get()->updateContentScale((TextureQuality)tq);
+        CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
+
+        BLAZE_TIMER_STEP("preparation for asset preloading");
+
+        // Init threadpool
+        s_loadThreadPool.emplace(asp::ThreadPool{});
+
+        auto resources1 = getLoadingLayerResources();
+        auto resources2 = getGameResources();
+
+        // Load images
+
+        for (auto& img : resources1) {
+            s_loadThreadPool->pushTask([&img] {
+                auto res = img.loadImage();
+                if (!res) {
+                    log::warn("Failed to initialize image: {}", res.unwrapErr());
+                }
+            });
+        }
+
+        for (auto& img : resources2) {
+            s_loadThreadPool->pushTask([&img] {
+                auto res = img.loadImage();
+                if (!res) {
+                    log::warn("Failed to initialize image: {}", res.unwrapErr());
+                }
+            });
+        }
+
+        // wait for all images to be preloaded (should be pretty quick, they are not decoded yet)
+        s_loadThreadPool->join();
+
+        // start decoding the images in background
+        asyncLoadLoadingLayerResources<true>(std::move(resources1));
+
+        // rest of the images (for the game itself)
+        asyncLoadGameResources<true>(std::move(resources2));
+
+        CCFileUtils::get()->removeSearchPath("Resources");
+
+        // wait until llm finishes initialization
+        BLAZE_TIMER_STEP("Wait for LLM to finish");
+        llmLoadThread.join();
 
         BLAZE_TIMER_END();
 
-        return true;
+        // finally go back to running the rest of the game
+
+        return CCApplication::run();
     }
 };

@@ -92,7 +92,7 @@ namespace blaze {
     }
 
     Result<OwnedMemoryChunk> Decompressor::decompressToChunk(const void* input, size_t size) {
-        OwnedMemoryChunk chunk(size * 2);
+        OwnedMemoryChunk chunk(size * 3);
 
         size_t writtenSize;
 

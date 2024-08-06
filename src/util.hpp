@@ -94,51 +94,26 @@ namespace blaze {
         uint8_t* data = nullptr;
         size_t size;
 
-        inline ~OwnedMemoryChunk() {
-            std::free(data);
-        }
+        ~OwnedMemoryChunk();
 
-        inline OwnedMemoryChunk(size_t size) : data(reinterpret_cast<uint8_t*>(std::malloc(size))), size(size) {
-            if (!this->data) {
-                throw std::bad_alloc();
-            }
-        }
+        OwnedMemoryChunk(size_t size);
 
         // Note that this class takes ownership of the passed pointer!
-        inline OwnedMemoryChunk(uint8_t* data, size_t size) : data(data), size(size) {}
-        inline OwnedMemoryChunk(std::unique_ptr<uint8_t[]> ptr, size_t size) : data(ptr.release()), size(size) {}
+        OwnedMemoryChunk(uint8_t* data, size_t size);
+        OwnedMemoryChunk(std::unique_ptr<uint8_t[]> ptr, size_t size);
+        OwnedMemoryChunk();
 
-        inline std::pair<uint8_t*, size_t> release() {
-            auto p = std::make_pair(data, size);
+        std::pair<uint8_t*, size_t> release();
 
-            this->data = nullptr;
-            this->size = 0;
-
-            return p;
-        }
-
-        inline void realloc(size_t newSize) {
-            this->data = reinterpret_cast<uint8_t*>(std::realloc(data, newSize));
-            if (!this->data) {
-                throw std::bad_alloc();
-            }
-
-            this->size = newSize;
-        }
+        void realloc(size_t newSize);
 
         OwnedMemoryChunk(const OwnedMemoryChunk&) = delete;
         OwnedMemoryChunk& operator=(const OwnedMemoryChunk&) = delete;
 
-        OwnedMemoryChunk(OwnedMemoryChunk&& other) {
-            std::tie(this->data, this->size) = other.release();
-        }
+        OwnedMemoryChunk(OwnedMemoryChunk&& other);
 
-        OwnedMemoryChunk& operator=(OwnedMemoryChunk&& other) {
-            if (this != &other) {
-                std::tie(this->data, this->size) = other.release();
-            }
+        OwnedMemoryChunk& operator=(OwnedMemoryChunk&& other);
 
-            return *this;
-        }
+        operator bool();
     };
 }

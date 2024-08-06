@@ -14,6 +14,7 @@ public:
     std::filesystem::path getCacheDir();
     std::filesystem::path cacheFileForChecksum(uint32_t crc);
     std::unique_ptr<uint8_t[]> readFile(const char* path, size_t& outSize);
+    blaze::OwnedMemoryChunk readFileToChunk(const char* path);
 
 
 private:

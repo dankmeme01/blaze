@@ -45,23 +45,23 @@ void CCImageExt::initWithDecodedImage(DecodedImage& img) {
     }
 }
 
-Result<> CCImageExt::initWithSPNG(void* data, size_t size) {
-    GEODE_UNWRAP_INTO(auto img, blaze::decodeSPNG(static_cast<uint8_t*>(data), size));
+Result<> CCImageExt::initWithSPNG(const void* data, size_t size) {
+    GEODE_UNWRAP_INTO(auto img, blaze::decodeSPNG(static_cast<const uint8_t*>(data), size));
 
     this->initWithDecodedImage(img);
 
     return Ok();
 }
 
-Result<> CCImageExt::initWithFPNG(void* data, size_t size) {
-    GEODE_UNWRAP_INTO(auto img, blaze::decodeFPNG(static_cast<uint8_t*>(data), size));
+Result<> CCImageExt::initWithFPNG(const void* data, size_t size) {
+    GEODE_UNWRAP_INTO(auto img, blaze::decodeFPNG(static_cast<const uint8_t*>(data), size));
 
     this->initWithDecodedImage(img);
 
     return Ok();
 }
 
-Result<> CCImageExt::initWithSPNGOrCache(uint8_t* buffer, size_t size, const char* imgPath) {
+Result<> CCImageExt::initWithSPNGOrCache(const uint8_t* buffer, size_t size, const char* imgPath) {
     ZoneScoped;
 
     // check if we have cached it already
@@ -104,6 +104,10 @@ Result<> CCImageExt::initWithSPNGOrCache(uint8_t* buffer, size_t size, const cha
     LoadManager::get().queueForCache(p, {});
 
     return this->initWithSPNG(buffer, size);
+}
+
+Result<> CCImageExt::initWithSPNGOrCache(const blaze::OwnedMemoryChunk& chunk, const char* imgPath) {
+    return this->initWithSPNGOrCache(chunk.data, chunk.size, imgPath);
 }
 
 }

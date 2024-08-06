@@ -34,11 +34,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE src/)
 # make spng use miniz instead of zlib
 target_compile_definitions(${PROJECT_NAME} PRIVATE SPNG_USE_MINIZ=1 SPNG_STATIC=1)
 
-if (BLAZE_DEBUG)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_DEBUG=1)
-endif()
-
-CPMAddPackage("gh:dankmeme01/asp2#7024af9")
+CPMAddPackage("gh:dankmeme01/asp2#8e25afa")
 CPMAddPackage(
     NAME Boost
     VERSION 1.84.0
@@ -53,6 +49,12 @@ CPMAddPackage(
     GIT_TAG "v1.20"
     OPTIONS "LIBDEFLATE_BUILD_SHARED_LIB OFF" "LIBDEFLATE_BUILD_GZIP OFF"
 )
+
+if (BLAZE_DEBUG)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_DEBUG=1)
+    target_compile_definitions(asp PRIVATE _HAS_ITERATOR_DEBUGGING=0)
+    target_compile_definitions(simdutf PRIVATE _HAS_ITERATOR_DEBUGGING=0)
+endif()
 
 # Suppress some warnings
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
