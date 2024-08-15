@@ -26,6 +26,7 @@
 
 #if defined(__clang__) || defined(__GNUC__)
 # define BLAZE_SSE2 __attribute__((__target__("sse2")))
+# define BLAZE_SSSE3 __attribute__((__target__("ssse3")))
 # define BLAZE_SSE41 __attribute__((__target__("sse4.1")))
 # define BLAZE_SSE42 __attribute__((__target__("sse4.2")))
 # define BLAZE_AVX __attribute__((__target__("avx")))
@@ -34,6 +35,7 @@
 #else // __clang__
 // on msvc there's no need to set these
 # define BLAZE_SSE2
+# define BLAZE_SSSE3
 # define BLAZE_SSE41
 # define BLAZE_SSE42
 # define BLAZE_AVX
@@ -115,5 +117,28 @@ namespace blaze {
         OwnedMemoryChunk& operator=(OwnedMemoryChunk&& other);
 
         operator bool();
+    };
+
+    struct AlignedMemoryChunk : OwnedMemoryChunk {
+        size_t align;
+
+        ~AlignedMemoryChunk();
+        AlignedMemoryChunk(size_t size, size_t alignment);
+        AlignedMemoryChunk();
+        // Note that this class takes ownership of the passed pointer!
+        AlignedMemoryChunk(uint8_t* data, size_t size, size_t alignment);
+
+        using OwnedMemoryChunk::release;
+
+        void realloc(size_t newSize);
+
+        AlignedMemoryChunk(const AlignedMemoryChunk&) = delete;
+        AlignedMemoryChunk& operator=(const AlignedMemoryChunk&) = delete;
+
+        AlignedMemoryChunk(AlignedMemoryChunk&& other);
+
+        AlignedMemoryChunk& operator=(AlignedMemoryChunk&& other);
+
+        using OwnedMemoryChunk::operator bool;
     };
 }
