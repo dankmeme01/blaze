@@ -41,7 +41,7 @@ void CCImageExt::initWithDecodedImage(DecodedImage& img) {
 
     // if the image is transparent and not premultiplied, premultiply it
     if (m_bHasAlpha && !img.premultiplied) {
-        premultiplyAlpha(m_pData, m_pData, img.rawSize);
+        premultiplyAlphaInplace(m_pData, img.rawSize);
     }
 }
 
