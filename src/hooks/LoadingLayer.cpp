@@ -21,6 +21,7 @@ using hclock = std::chrono::high_resolution_clock;
 
 // mutexes for thread unsafe classes
 static asp::Mutex<> texCacheMutex, sfcacheMutex;
+static GameManager* gm;
 
 // big hack to call a private cocos function
 namespace {
@@ -167,6 +168,8 @@ struct AsyncImageLoadRequest {
     inline void addSpriteFramesAsync(TextureQuality texQuality) const {
         if (!plistFile) return;
         if (!texture) return;
+
+        log::debug("adding sprite frames for {} (tq: {})", plistFile, (int)texQuality);
 
         ZoneScoped;
 
@@ -377,6 +380,11 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         if (!CCLayer::init()) return false;
 
+        if (fromReload) {
+            // Init threadpool
+            s_loadThreadPool.emplace(asp::ThreadPool{});
+        }
+
         this->m_fromRefresh = fromReload;
         CCDirector::get()->m_bDisplayStats = true;
 
@@ -392,7 +400,6 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         }
 #endif
 
-        auto* gm = GameManager::get();
         if (gm->m_switchModes) {
             gm->m_switchModes = false;
             GameLevelManager::get()->getLevelSaveData();
@@ -484,7 +491,6 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         AchievementManager::sharedState();
 
         // kinda obsolete lol
-        auto* gm = GameManager::get();
         if (gm->m_recordGameplay && !m_fromRefresh) {
             gm->m_everyPlaySetup = true;
         }
@@ -499,7 +505,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         while (true) {
             if (g_gameLoadStage.channel->empty()) {
-                if (!s_loadThreadPool->isDoingWork()) {
+                if (s_loadThreadPool->isDoingWork()) {
                     std::this_thread::yield();
                     continue;
                 } else if (g_gameLoadStage.channel->empty()) {
@@ -516,7 +522,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
             if (iTask->plistFile) {
                 s_loadThreadPool->pushTask([iTask] {
-                    iTask->addSpriteFramesAsync((TextureQuality) GameManager::get()->m_texQuality);
+                    iTask->addSpriteFramesAsync((TextureQuality) gm->m_texQuality);
                 });
             }
         }
@@ -542,6 +548,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             s_loadThreadPool.reset();
         }).detach();
 
+        log::debug("final final end");
         BLAZE_TIMER_END();
 
         this->finishLoading();
@@ -560,12 +567,21 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     void finishLoading() {
         auto finishTime = hclock::now();
 
-        auto tookTimeFull = finishTime - g_launchTime;
-        log::info("Loading took {}, handing off..", formatDuration(tookTimeFull));
+        hclock::duration tookTimeFull;
+        if (m_fromRefresh) {
+            tookTimeFull = finishTime - m_fields->startedLoadingGame;
+        } else {
+            tookTimeFull = finishTime - g_launchTime;
+        }
+
+        log::info("{} took {}, handing off..", m_fromRefresh ? "Reloading" : "Loading", formatDuration(tookTimeFull));
 
 #ifdef BLAZE_DEBUG
-        log::debug("- Geode entry remainder: {}", formatDuration(g_ccApplicationRunTime - g_launchTime));
-        log::debug("- Initial game setup: {}", formatDuration(m_fields->startedLoadingGame - g_ccApplicationRunTime));
+        if (!m_fromRefresh) {
+            log::debug("- Geode entry remainder: {}", formatDuration(g_ccApplicationRunTime - g_launchTime));
+            log::debug("- Initial game setup: {}", formatDuration(m_fields->startedLoadingGame - g_ccApplicationRunTime));
+        }
+
         log::debug("- Pre-loading: {}", formatDuration(m_fields->finishedLoadingGame - m_fields->startedLoadingGame));
         log::debug("- Delay before asset loading: {}", formatDuration(m_fields->startedLoadingAssets - m_fields->finishedLoadingGame));
         log::debug("- Asset loading: {}", formatDuration(finishTime - m_fields->startedLoadingAssets));
@@ -659,7 +675,7 @@ class $modify(CCApplication) {
         CCFileUtils::get()->addSearchPath("Resources");
 
         // initialize gamemanager, we have to do it on main thread right here
-        GameManager::get();
+        gm = GameManager::get();
 
         // setup fmod asynchronously
 #ifndef GEODE_IS_ANDROID
@@ -676,7 +692,7 @@ class $modify(CCApplication) {
         llmLoadThread.start();
 
         // set appropriate texture quality
-        auto tq = GameManager::get()->m_texQuality;
+        auto tq = gm->m_texQuality;
         CCDirector::get()->updateContentScale((TextureQuality)tq);
         CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
 
