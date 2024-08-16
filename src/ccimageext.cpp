@@ -8,6 +8,7 @@
 #include <algo/alpha.hpp>
 #include <algo/crc32.hpp>
 #include <tracing.hpp>
+#include <settings.hpp>
 
 using namespace geode::prelude;
 
@@ -63,6 +64,11 @@ Result<> CCImageExt::initWithFPNG(const void* data, size_t size) {
 
 Result<> CCImageExt::initWithSPNGOrCache(const uint8_t* buffer, size_t size, const char* imgPath) {
     ZoneScoped;
+
+    // if image cache is disabled, or small mode is enabled and image is <64k, don't do caching
+    if (!blaze::settings().imageCache || (blaze::settings().imageCacheSmall && size < 65536)) {
+        return this->initWithSPNG(buffer, size);
+    }
 
     // check if we have cached it already
     auto checksum = blaze::crc32(buffer, size);

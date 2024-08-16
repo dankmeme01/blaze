@@ -1,3 +1,9 @@
+# 1.3.0
+
+- Add async GLFW setting, which initializes GLFW in parallel (experimental and disabled by default!)
+- Slightly speed up image loading with simd alpha premultiplication
+- Add more settings for toggling certain features
+
 # 1.2.0
 
 - Parallelize `FMODAudioEngine` setup, making game loading quite a bit faster.

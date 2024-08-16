@@ -8,11 +8,38 @@
 	},
 	"id": "dankmeme.blaze",
 	"name": "Blaze",
-	"version": "v1.2.0",
+	"version": "v1.3.0",
 	"developer": "dankmeme",
 	"description": "Optimization mod",
 	"early-load": true,
 	"settings": {
+		"image-cache": {
+			"name": "Image cache",
+			"type": "bool",
+			"description": "After loading an image, cache it using a quicker format (FPNG), then in future load the cached version instead.",
+			"default": true
+		},
+		"image-cache-small": {
+			"name": "Smaller image cache",
+			"type": "bool",
+			"description": "When this option and <cy>Image cache</c> are enabled, only cache images bigger than 64kb",
+			"default": true
+		},
+		"async-glfw": {
+			"name": "Async GLFW",
+			"type": "bool",
+			"description": "<cp>Note: experimental!</c>\n\nPre-initializes GLFW on a different thread, while doing other loading tasks in parallel. May be unstable and cause crashes.",
+			"default": false,
+			"platforms": [
+				"win"
+			]
+		},
+		"fast-saving": {
+			"name": "Fast Saving",
+			"type": "bool",
+			"description": "Use a significantly faster compressor to save data to your savefile. Prevents the game for hanging for a few seconds every time it's closed.",
+			"default": true
+		},
 		"uncompressed-saves": {
 			"name": "Uncompressed Save",
 			"type": "bool",

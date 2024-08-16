@@ -1,4 +1,4 @@
-// Blaze LoadingLayer hooks.
+// Blaze LoadingLayer and CCApplication/AppDelegate hooks.
 //
 // Completely rewrites the loading logic to be multithreaded.
 
@@ -14,6 +14,7 @@
 #include <TaskTimer.hpp>
 #include <manager.hpp>
 #include <ccimageext.hpp>
+#include <settings.hpp>
 #include <tracing.hpp>
 
 using namespace geode::prelude;
@@ -40,6 +41,15 @@ namespace {
 
     void _addSpriteFramesWithDictionary(CCDictionary* p1, CCTexture2D* p2);
 }
+
+auto glfwInitWGL_O = reinterpret_cast<bool (*)()>(geode::base::getCocos() + 0xda4d0);
+auto glfwInit_O = reinterpret_cast<int (*)()>(geode::base::getCocos() + 0xd1020);
+// auto cceglViewCtor_O = reinterpret_cast<CCEGLView* (*)(CCEGLView*)>(geode::base::getCocos() + 0x74530);
+// auto glfwCreateWindow_O = reinterpret_cast<GLFWwindow* (*)(int width, int height, const char* title, GLFWmonitor* monitor, GLFWwindow* share)>(geode::base::getCocos() + 0xd1c40);
+auto _glfwCreateWindowWin32_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*, const void*)>(geode::base::getCocos() + 0xd3bd0);
+auto _glfwCreateContextWGL_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xda050);
+auto createNativeWindow_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xd4fb0);
+auto _glfwRefreshContextAttribs_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*)>(geode::base::getCocos() + 0xd0310);
 
 // AsyncImageLoadRequest - structure that handles the loading of a specific texture
 namespace {
@@ -191,7 +201,7 @@ struct AsyncImageLoadRequest {
         CCDictionary* dict;
 
         {
-            ZoneScopedN("asyndAddSpriteFrames ccdict");
+            ZoneScopedN("asyncAddSpriteFrames ccdict");
 
             dict = CCDictionary::createWithContentsOfFileThreadSafe(plistPath.c_str());
 
@@ -666,8 +676,31 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
 class $modify(CCApplication) {
     int run() {
-        BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
         g_ccApplicationRunTime = hclock::now();
+
+        BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
+
+        // early init glfw
+#ifdef GEODE_IS_WINDOWS
+        std::optional<asp::Thread<>> glfwInitThread;
+        if (blaze::settings().asyncGlfw) {
+            glfwInitThread.emplace(asp::Thread<>{});
+            glfwInitThread->setLoopFunction([](auto& stopToken) {
+                int result = glfwInit_O();
+
+                if (result == 1) {
+                    bool result2 = glfwInitWGL_O();
+                    if (!result2) {
+                        log::warn("_glfwInitWGL failed.");
+                    }
+                } else {
+                    log::warn("glfwInit failed: {}", result);
+                }
+                stopToken.stop();
+            });
+            glfwInitThread->start();
+        }
+#endif
 
         CCFileUtils::get()->addSearchPath("Resources");
 
@@ -733,8 +766,15 @@ class $modify(CCApplication) {
         CCFileUtils::get()->removeSearchPath("Resources");
 
         // wait until llm finishes initialization
-        BLAZE_TIMER_STEP("Wait for LLM to finish");
+        BLAZE_TIMER_STEP("Wait for LLM init job to finish");
         llmLoadThread.join();
+
+#ifdef GEODE_IS_WINDOWS
+        if (glfwInitThread) {
+            BLAZE_TIMER_STEP("Wait for async GLFW job to finish");
+            glfwInitThread->join();
+        }
+#endif
 
         BLAZE_TIMER_END();
 
@@ -743,3 +783,62 @@ class $modify(CCApplication) {
         return CCApplication::run();
     }
 };
+
+
+
+bool _glfwCreateWindowWin32(GLFWwindow* window,
+                                const void* wndconfig,
+                                const void* ctxconfig,
+                                const void* fbconfig) {
+    ZoneScoped;
+    BLAZE_TIMER_START("glfwCreateWindowWin32");
+
+    auto wnd = createNativeWindow_O(window, wndconfig, fbconfig);
+    if (!wnd) return false;
+
+    int int1 = reinterpret_cast<const int*>(ctxconfig)[0];
+    int int2 = reinterpret_cast<const int*>(ctxconfig)[1];
+
+    if (int1 != 0) {
+        if (int2 != 0x36001) {
+            log::error("Type is wrong: {:X}", int2);
+            std::abort(); // this should never be achievable on windows
+        }
+
+        BLAZE_TIMER_STEP("glfwInitWGL");
+        if (!glfwInitWGL_O()) {
+            return false;
+        }
+
+        BLAZE_TIMER_STEP("glfwCreateContextWGL");
+        if (!_glfwCreateContextWGL_O(window, ctxconfig, fbconfig)) {
+            return false;
+        }
+
+        BLAZE_TIMER_STEP("glfwRefreshContextAttribs");
+        if (!_glfwRefreshContextAttribs_O(window, ctxconfig)) {
+            return false;
+        }
+    }
+
+    BLAZE_TIMER_STEP("Misc tasks");
+    auto hwnd = *(HWND*)((char*)window + 0x370);
+    ShowWindow(hwnd, 0x8);
+    BringWindowToTop(hwnd);
+    SetForegroundWindow(hwnd);
+    SetFocus(hwnd);
+
+    return true;
+}
+
+#ifdef GEODE_IS_WINDOWS
+$execute {
+    if (blaze::settings().asyncGlfw) {
+        (void) Mod::get()->hook(
+            reinterpret_cast<void*>(_glfwCreateWindowWin32_O),
+            _glfwCreateWindowWin32,
+            "_glfwCreateWindowWin32"
+        );
+    }
+}
+#endif

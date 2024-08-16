@@ -25,6 +25,24 @@ class $modify(CCEGLView) {
         CCEGLView::swapBuffers();
         FrameMark;
     }
+
+    static CCEGLView* createWithRect(const gd::string& p0, CCRect p1, float p2) {
+        ZoneScopedN("CCEGLView::createWithRect");
+
+        return CCEGLView::createWithRect(p0, p1, p2);
+    }
+
+    static CCEGLView* createWithFullScreen(const gd::string& p0, bool p1) {
+        ZoneScopedN("CCEGLView::createWithFullscreen");
+
+        return CCEGLView::createWithFullScreen(p0, p1);
+    }
+
+    void setupWindow(CCRect r) {
+        ZoneScopedN("CCEGLView::setupWindow");
+
+        return CCEGLView::setupWindow(r);
+    }
 };
 #endif
 
@@ -59,6 +77,7 @@ class $modify(CCEGLView) {
 GEODE_WINDOWS(PROFILER_HOOK(void, CCEGLView, pollEvents));
 PROFILER_HOOK(void, CCDirector, drawScene);
 PROFILER_HOOK(void, CCDirector, setNextScene);
+PROFILER_HOOK(void, CCDirector, setOpenGLView, CCEGLView*);
 
 // gd init
 PROFILER_HOOK(bool, EditLevelLayer, init, GJGameLevel*)
@@ -241,5 +260,6 @@ PROFILER_HOOK(void, CCNode, updateTransform)
 
 PROFILER_HOOK(int, CCApplication, run)
 GEODE_WINDOWS(PROFILER_HOOK(void, AppDelegate, setupGLView))
+
 
 #endif // BLAZE_TRACY

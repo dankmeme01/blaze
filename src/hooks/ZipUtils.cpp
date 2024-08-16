@@ -1,12 +1,11 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/ZipUtils.hpp>
 
-#include <Geode/loader/SettingEvent.hpp>
-
 #include <algo/base64.hpp>
 #include <algo/compress.hpp>
 #include <algo/xor.hpp>
 #include <util.hpp>
+#include <settings.hpp>
 #include <TaskTimer.hpp>
 
 using namespace geode::prelude;
@@ -14,17 +13,8 @@ using namespace geode::prelude;
 // i thought of making it an option, but past level 1 it's really diminishing returns.
 // level 0 is fastest but can be up to 50% bigger in size than level 1
 // levels 1-12 have nearly identical decompression speed and size, but the compression speed grows up to multiple seconds.
-
-static int COMPRESSION_MODE = 1;
-
-$on_mod(Loaded) {
-    bool store = Mod::get()->getSettingValue<bool>("uncompressed-saves");
-
-    COMPRESSION_MODE = store ? 0 : 1;
-
-    listenForSettingChanges("uncompressed-saves", +[](bool value) {
-        COMPRESSION_MODE = value ? 0 : 1;
-    });
+static int compressionMode() {
+    return blaze::settings().uncompressedSaves ? 0 : 1;
 }
 
 #define BLAZE_HOOK_COMPRESS 1
@@ -38,6 +28,16 @@ class $modify(ZipUtils) {
         BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::ccInflateMemory);
         BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::ccInflateMemoryWithHint);
         BLAZE_HOOK_VERY_LAST(cocos2d::ZipUtils::ccDeflateMemory);
+
+        if (!blaze::settings().fastSaving) {
+            if (auto h = self.getHook("cocos2d::ZipUtils::compressString")) {
+                h.unwrap()->setAutoEnable(false);
+            }
+
+            if (auto h = self.getHook("cocos2d::ZipUtils::ccDeflateMemory")) {
+                h.unwrap()->setAutoEnable(false);
+            }
+        }
     }
 
 #if BLAZE_HOOK_DECOMPRESS
@@ -151,7 +151,7 @@ class $modify(ZipUtils) {
 
 #if BLAZE_HOOK_COMPRESS
     static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
-        blaze::Compressor compressor(COMPRESSION_MODE);
+        blaze::Compressor compressor(compressionMode());
         compressor.setMode(blaze::CompressionMode::Gzip);
 
         auto chunk = compressor.compressToChunk(input, size);
@@ -165,7 +165,7 @@ class $modify(ZipUtils) {
     static gd::string compressString(gd::string const& data, bool encrypt, int key) {
         BLAZE_TIMER_START("compressString compression");
 
-        blaze::Compressor compressor(COMPRESSION_MODE);
+        blaze::Compressor compressor(compressionMode());
         compressor.setMode(blaze::CompressionMode::Gzip);
 
         auto compressedData = compressor.compress(data.data(), data.size());
