@@ -1,8 +1,11 @@
 #include "alpha.hpp"
 
 #include <asp/simd.hpp>
-#include <immintrin.h>
 #include <util.hpp>
+
+#ifdef ASP_IS_X86
+# include <immintrin.h>
+#endif
 
 #include <tracing.hpp>
 

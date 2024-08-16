@@ -169,8 +169,6 @@ struct AsyncImageLoadRequest {
         if (!plistFile) return;
         if (!texture) return;
 
-        log::debug("adding sprite frames for {} (tq: {})", plistFile, (int)texQuality);
-
         ZoneScoped;
 
         // try to guess the full plist name without calling fullPathForFilename
@@ -548,7 +546,6 @@ class $modify(MyLoadingLayer, LoadingLayer) {
             s_loadThreadPool.reset();
         }).detach();
 
-        log::debug("final final end");
         BLAZE_TIMER_END();
 
         this->finishLoading();
@@ -668,7 +665,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 };
 
 class $modify(CCApplication) {
-    int run() override {
+    int run() {
         BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
         g_ccApplicationRunTime = hclock::now();
 
