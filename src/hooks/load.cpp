@@ -42,6 +42,7 @@ namespace {
     void _addSpriteFramesWithDictionary(CCDictionary* p1, CCTexture2D* p2);
 }
 
+#ifdef GEODE_IS_WINDOWS
 auto glfwInitWGL_O = reinterpret_cast<bool (*)()>(geode::base::getCocos() + 0xda4d0);
 auto glfwInit_O = reinterpret_cast<int (*)()>(geode::base::getCocos() + 0xd1020);
 // auto cceglViewCtor_O = reinterpret_cast<CCEGLView* (*)(CCEGLView*)>(geode::base::getCocos() + 0x74530);
@@ -50,6 +51,7 @@ auto _glfwCreateWindowWin32_O = reinterpret_cast<bool (*)(GLFWwindow*, const voi
 auto _glfwCreateContextWGL_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xda050);
 auto createNativeWindow_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xd4fb0);
 auto _glfwRefreshContextAttribs_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*)>(geode::base::getCocos() + 0xd0310);
+#endif
 
 // AsyncImageLoadRequest - structure that handles the loading of a specific texture
 namespace {
@@ -784,8 +786,7 @@ class $modify(CCApplication) {
     }
 };
 
-
-
+#ifdef GEODE_IS_WINDOWS
 bool _glfwCreateWindowWin32(GLFWwindow* window,
                                 const void* wndconfig,
                                 const void* ctxconfig,
@@ -831,7 +832,6 @@ bool _glfwCreateWindowWin32(GLFWwindow* window,
     return true;
 }
 
-#ifdef GEODE_IS_WINDOWS
 $execute {
     if (blaze::settings().asyncGlfw) {
         (void) Mod::get()->hook(
