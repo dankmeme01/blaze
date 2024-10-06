@@ -6,6 +6,7 @@ namespace blaze {
         bool imageCache = false;
         bool imageCacheSmall = false;
         bool asyncGlfw = false;
+        bool asyncFmod = false;
         bool fastSaving = false;
         bool uncompressedSaves = false;
     };

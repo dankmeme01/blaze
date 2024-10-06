@@ -74,6 +74,7 @@ namespace blaze {
         if (asp::simd::getFeatures().sse4_2) return crc32hw(bytes, len, initial);
         return crc32slow(bytes, len, initial);
 #elif defined(ASP_IS_ARM64)
+		// TODO https://android.googlesource.com/platform/ndk/+/master/sources/android/cpufeatures/cpu-features.h
 		// tbh this should be moved into aps
 		static bool supportsCrc32 = []{
 			constexpr int hwcapCrc32 = (1 << 7); // asm/hwcap.h

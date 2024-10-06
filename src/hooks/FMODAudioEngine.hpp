@@ -21,7 +21,8 @@ class $modify(HookedFMODAudioEngine, FMODAudioEngine) {
     }
 
     // Hooked and reimplemented to be asynchronous.
-    $override void setupAudioEngine();
+    $override
+    void setupAudioEngine();
 
-    void setupAudioEngineReimpl(bool gv0159, bool reducedQuality);
+    void setupAudioEngineReimpl(bool gv0159, bool reducedQuality, bool inThread);
 };

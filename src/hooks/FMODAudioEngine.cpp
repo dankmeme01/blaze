@@ -1,9 +1,10 @@
 #include "FMODAudioEngine.hpp"
 
-#include <TaskTimer.hpp>
 #include <asp/thread/Thread.hpp>
-
 #include <fmod_errors.h>
+
+#include <TaskTimer.hpp>
+#include <settings.hpp>
 
 using namespace geode::prelude;
 
@@ -28,12 +29,17 @@ void HookedFMODAudioEngine::setupAudioEngine() {
 
 #ifdef GEODE_IS_ANDROID
     // this bullshit os cannot initialize fmod from a thread
-    this->setupAudioEngineReimpl(gv0159, reducedQuality);
+    this->setupAudioEngineReimpl(gv0159, reducedQuality, false);
 #else
+    if (!blaze::settings().asyncFmod) {
+        this->setupAudioEngineReimpl(gv0159, reducedQuality, false);
+        return;
+    }
+
     asp::Thread<bool, bool> thread;
 
     thread.setLoopFunction([this](bool a, bool b, asp::StopToken<bool, bool>& stopToken) {
-        this->setupAudioEngineReimpl(a, b);
+        this->setupAudioEngineReimpl(a, b, true);
         stopToken.stop();
     });
 
@@ -42,7 +48,7 @@ void HookedFMODAudioEngine::setupAudioEngine() {
 #endif
 }
 
-void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQuality) {
+void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQuality, bool inThread) {
     // Blaze initializes the engine on another thread, so just to be sure, synchronize this part
     std::lock_guard lock(m_fields->initMutex);
 
@@ -53,10 +59,18 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
         return;
     }
 
+    if (inThread) {
+        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    }
+
+    auto cleanup = [inThread]{ if (inThread) CoUninitialize(); };
+
+
     FMOD_CALL(FMOD::System_Create(&m_system));
 
     if (!m_system) {
         log::warn("FMOD System initialization failed, so the rest of the audio engine initialization cannot proceed.");
+        cleanup();
         return;
     }
 
@@ -128,4 +142,6 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
     m_globalChannelDSP->setMeteringEnabled(false, true);
 
     m_fields->initialized = true;
+
+    cleanup();
 }

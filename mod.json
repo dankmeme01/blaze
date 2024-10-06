@@ -1,5 +1,5 @@
 {
-	"geode": "3.4.0",
+	"geode": "3.8.1",
 	"gd": {
 		"win": "2.206",
 		"android": "2.206",
@@ -29,6 +29,15 @@
 			"name": "Async GLFW",
 			"type": "bool",
 			"description": "<cp>Note: experimental!</c>\n\nPre-initializes GLFW on a different thread, while doing other loading tasks in parallel. May be unstable and cause crashes.",
+			"default": false,
+			"platforms": [
+				"win"
+			]
+		},
+		"async-fmod": {
+			"name": "Async FMOD",
+			"type": "bool",
+			"description": "<cp>Note: experimental!</c>\n\nInitializes FMOD on a different thread, while doing other loading tasks in parallel. May be unstable and cause crashes.",
 			"default": false,
 			"platforms": [
 				"win"

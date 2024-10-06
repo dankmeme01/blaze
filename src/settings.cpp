@@ -13,6 +13,7 @@ namespace blaze {
             settings.imageCache = Mod::get()->getSettingValue<bool>("image-cache");
             settings.imageCacheSmall = Mod::get()->getSettingValue<bool>("image-cache-small");
             settings.asyncGlfw = Mod::get()->getSettingValue<bool>("async-glfw");
+            settings.asyncFmod = Mod::get()->getSettingValue<bool>("async-fmod");
             settings.fastSaving = Mod::get()->getSettingValue<bool>("fast-saving");
             settings.uncompressedSaves = Mod::get()->getSettingValue<bool>("uncompressed-saves");
         }
