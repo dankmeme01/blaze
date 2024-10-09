@@ -59,12 +59,15 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
         return;
     }
 
+#ifdef GEODE_IS_WINDOWS
     if (inThread) {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     }
 
     auto cleanup = [inThread]{ if (inThread) CoUninitialize(); };
-
+#else
+    auto cleanup = []{};
+#endif
 
     FMOD_CALL(FMOD::System_Create(&m_system));
 

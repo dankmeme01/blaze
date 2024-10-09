@@ -4,10 +4,12 @@ todo readme
 
 feats:
 
-* 30-40% faster savefile loading
-* Up to 5-7x faster savefile saving
-* idkx (maybe 200-400%) game resource loading
-* 5-10% faster string creation
-* Mod can be safely uninstalled and your savefile will still load
 
-Overall, game launches can be up to 2-2.5x faster, on my machine on average the speed goes up from ~3.85s to ~1.85s (38mb save, i5-13600k, no megahack, with globed asset preloading)
+* Up to 500-700% faster savefile saving (at the cost of a few extra kilobytes)
+* 30-40% faster savefile loading
+* ~200-400% faster game resource loading
+* 5-10% faster CCString creation
+* Faster loading of textures from any mod (faster image decoding library & optional image caching)
+* No custom formats - mod can be safely uninstalled and your savefile will still load
+* Parallelized audio engine loading (experimental, disabled by default, unavailable on Android)
+* Parallelized GLFW setup (experimental, disabled by default)
