@@ -1,6 +1,6 @@
 #pragma once
 #include <cocos2d.h>
-#include <Geode/utils/Result.hpp>
+#include <Geode/Result.hpp>
 
 #include <formats.hpp>
 #include <util.hpp>

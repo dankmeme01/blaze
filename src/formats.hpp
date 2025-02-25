@@ -1,6 +1,6 @@
 #pragma once
 #include <boost/container/vector.hpp>
-#include <Geode/utils/Result.hpp>
+#include <Geode/Result.hpp>
 
 namespace blaze {
 

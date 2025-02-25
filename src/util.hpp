@@ -116,7 +116,7 @@ namespace blaze {
 
         OwnedMemoryChunk& operator=(OwnedMemoryChunk&& other);
 
-        operator bool();
+        explicit operator bool();
     };
 
     struct AlignedMemoryChunk : OwnedMemoryChunk {

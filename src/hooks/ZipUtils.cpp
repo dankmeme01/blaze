@@ -50,7 +50,7 @@ class $modify(ZipUtils) {
             return ZipUtils::ccDeflateMemory(input, size, outp);
         }
 
-        auto [outPtr, outSize] = chunk->release();
+        auto [outPtr, outSize] = chunk.unwrap().release();
 
         *outp = outPtr;
         return outSize;

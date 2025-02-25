@@ -118,7 +118,7 @@ struct AsyncImageLoadRequest {
     }
 
     bool isImageLoaded() {
-        return this->imageData;
+        return (bool) this->imageData;
     }
 
     inline Result<> initImage() {
@@ -318,7 +318,7 @@ static void asyncLoadLoadingLayerResources(std::vector<AsyncImageLoadRequest>&& 
     asp::Thread<std::vector<AsyncImageLoadRequest>> thread;
     thread.setLoopFunction([](std::vector<AsyncImageLoadRequest>& items, auto& stopToken) {
         for (auto& item : items) {
-            Result<> res;
+            Result<> res = Ok();
 
             if constexpr (!SkipLoadImage) {
                 res = item.loadImage();
@@ -350,7 +350,7 @@ static void asyncLoadGameResources(std::vector<AsyncImageLoadRequest>&& resource
 
     for (auto& img : g_gameLoadStage.requests) {
         s_loadThreadPool->pushTask([&img] {
-            Result<> res;
+            Result<> res = Ok();
 
             if constexpr (!SkipLoadImage) {
                 res = img.loadImage();

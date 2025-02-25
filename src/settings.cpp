@@ -1,6 +1,6 @@
 #include "settings.hpp"
 
-#include <Geode/loader/SettingEvent.hpp>
+#include <Geode/loader/Setting.hpp>
 
 using namespace geode::prelude;
 
