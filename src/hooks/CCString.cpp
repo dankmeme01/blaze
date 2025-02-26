@@ -8,7 +8,7 @@
 
 using namespace geode::prelude;
 
-static bool initHook(CCString* self, const char* format, va_list args) {
+static bool CCString_initHook(CCString* self, const char* format, va_list args) {
     ZoneScopedN("CCString::initWithFormatAndValist");
 
     // Note: this size excludes the null terminator
@@ -19,6 +19,7 @@ static bool initHook(CCString* self, const char* format, va_list args) {
 #else
     self->m_sString = gd::string(std::string(size, '\0'));
 #endif
+
     std::vsnprintf(self->m_sString.data(), self->m_sString.size() + 1, format, args);
 
     return true;
@@ -38,22 +39,22 @@ $execute {
     }
 
     // auto start1 = benchTimer();
-    // for (size_t i = 0; i < 65536; i++) {
-    //     CCString::createWithFormat("%s-%d", "hello", 43);
+    // for (size_t i = 0; i < 2000; i++) {
+    //     CCString::createWithFormat("%d", i);
     // }
     // auto took1 = benchTimer() - start1;
 
     auto hook = Mod::get()->hook(
         addr,
-        &initHook,
+        &CCString_initHook,
         "CCString::initWithFormatAndValist",
         tulip::hook::TulipConvention::Default
     ).unwrap();
     hook->setPriority(99999999);
 
     // auto start2 = benchTimer();
-    // for (size_t i = 0; i < 65536; i++) {
-    //     CCString::createWithFormat("%s-%d", "hello", 43);
+    // for (size_t i = 0; i < 2000; i++) {
+    //     CCString::createWithFormat("%d", i);
     // }
     // auto took2 = benchTimer() - start2;
 
