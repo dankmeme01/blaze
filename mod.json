@@ -55,5 +55,10 @@
 			"description": "Stores the save data without compression, resulting in slightly faster loading & saving times.\n\n<cy>Note: this may increase the size of your savefile by up to 50%.</c>",
 			"default": false
 		}
+	},
+	"resources": {
+		"sprites": [
+			"resources/fire.png"
+		]
 	}
 }

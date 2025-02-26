@@ -2,11 +2,9 @@
 
 Mod for Geometry Dash that significantly speeds up loading times.
 
-todo readme
+Feats:
 
-feats:
-
-* Up to 500-700% faster savefile saving (at the cost of a few extra kilobytes)
+* Up to 500-700% faster savefile saving (at the cost of some extra size)
 * 30-40% faster savefile loading
 * ~200-400% faster game resource loading
 * 5-10% faster CCString creation
@@ -19,6 +17,11 @@ Overall, game launches can be 2-3x faster, on my machine on average the speed go
 
 Note: all those numbers are on Windows. On other operating systems, the performance increase might not be that big.
 
+For developers:
+
+* Hooks `CCFileUtils::getFileData` to make it thread-safe (without Blaze, using this function from multiple threads is UB on Android!)
+* Hooks most image APIs (`CCImage` create and init functions) as well, to use a faster PNG decoder
+* Hooks `base64Decode` function, making it faster and patching the UB
 
 ## Credit
 
@@ -27,7 +30,11 @@ Note: all those numbers are on Windows. On other operating systems, the performa
 
 ## Used libraries
 
+* [asp](https://github.com/dankmeme01/asp2)
 * [fpng](https://github.com/richgel999/fpng)
 * [spng](https://github.com/randy408/libspng)
 * [miniz](https://github.com/richgel999/miniz)
+* [libdeflate](https://github.com/ebiggers/libdeflate)
+* [sinaps](https://github.com/Prevter/sinaps/)
 * [fast_vector](https://github.com/sigerror/fast-vector)
+* [fast_float](https://github.com/fastfloat/fast_float)

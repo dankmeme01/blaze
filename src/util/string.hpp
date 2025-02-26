@@ -5,16 +5,16 @@
 
 namespace blaze {
 
-float parseFloat(std::string_view str);
-float parseFloat(const char* str);
-float parseFloat(const cocos2d::CCString* str);
+std::optional<float> parseFloat(std::string_view str);
+std::optional<float> parseFloat(const char* str);
+std::optional<float> parseFloat(const cocos2d::CCString* str);
 
-double parseDouble(std::string_view str);
-double parseDouble(const char* str);
-double parseDouble(const cocos2d::CCString* str);
+std::optional<double> parseDouble(std::string_view str);
+std::optional<double> parseDouble(const char* str);
+std::optional<double> parseDouble(const cocos2d::CCString* str);
 
-int parseInt(std::string_view str);
-int parseInt(const char* str);
-int parseInt(const cocos2d::CCString* str);
+std::optional<int> parseInt(std::string_view str);
+std::optional<int> parseInt(const char* str);
+std::optional<int> parseInt(const cocos2d::CCString* str);
 
 }

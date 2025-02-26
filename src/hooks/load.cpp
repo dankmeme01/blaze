@@ -16,6 +16,7 @@
 #include <ccimageext.hpp>
 #include <settings.hpp>
 #include <tracing.hpp>
+#include <util/hash.hpp>
 
 #include "load/glfw.hpp"
 #include "load/spriteframes.hpp"
@@ -141,17 +142,8 @@ struct AsyncImageLoadRequest {
         return this->texture != nullptr;
     }
 
-    // Adds sprite frames given the plist file. Does nothing if plist file is nullptr.
-    inline void addSpriteFramesSync() const {
-        if (!plistFile) return;
-        if (!texture) return;
-
-        auto _g = sfcacheMutex.lock();
-        CCSpriteFrameCache::get()->addSpriteFramesWithFile(plistFile, texture);
-    }
-
     // Async version of addSpriteFramesSync
-    inline void addSpriteFramesAsync(TextureQuality texQuality) const {
+    inline void addSpriteFrames(TextureQuality texQuality) const {
         if (!plistFile) return;
         if (!texture) return;
 
@@ -178,7 +170,7 @@ struct AsyncImageLoadRequest {
         }
 
         {
-            ZoneScopedN("addSpriteFramesAsync loading plist");
+            ZoneScopedN("addSpriteFrames loading plist");
 
             auto fu = CCFileUtils::get();
             unsigned long size = 0;
@@ -205,7 +197,7 @@ struct AsyncImageLoadRequest {
 
             std::unique_ptr<blaze::SpriteFrameData> spf;
             {
-                ZoneScopedN("addSpriteFramesAsync parsing sprite frames");
+                ZoneScopedN("addSpriteFrames parsing sprite frames");
                 auto res = blaze::parseSpriteFrames(dataptr, size);
 
                 if (res) {
@@ -216,7 +208,7 @@ struct AsyncImageLoadRequest {
             }
 
             if (spf) {
-                ZoneScopedN("addSpriteFramesAsync adding frames to cache")
+                ZoneScopedN("addSpriteFrames adding frames to cache")
 
                 auto _lck = sfcacheMutex.lock();
 
@@ -435,7 +427,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
                 continue;
             }
 
-            iTask.addSpriteFramesSync();
+            iTask.addSpriteFrames((TextureQuality) gm->m_texQuality);
         }
 
         BLAZE_TIMER_STEP("LoadingLayer UI");
@@ -531,7 +523,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
             if (iTask->plistFile) {
                 s_loadThreadPool->pushTask([iTask] {
-                    iTask->addSpriteFramesAsync((TextureQuality) gm->m_texQuality);
+                    iTask->addSpriteFrames((TextureQuality) gm->m_texQuality);
                 });
             }
         }
@@ -678,6 +670,17 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 class $modify(CCApplication) {
     int run() {
         g_ccApplicationRunTime = hclock::now();
+
+        // Check if our compile-time crc32 algorithm works correctly (should never fail, but we'll keep as a sanity check)
+        if (blaze::hashStringRuntime("hai uwu") != BLAZE_STRING_HASH("hai uwu")) {
+            log::error("ERROR: blaze detected abnormality in the hashing algorithm.");
+            log::error("Mismatch between runtime and compile-time hashing algorithms was detected,");
+            log::error("- Value computed at compile time: 0x{:08x}", BLAZE_STRING_HASH("hai uwu"));
+            log::error("- Value computed at runtime: 0x{:08x}", blaze::hashStringRuntime("hai uwu"));
+            log::error("");
+            log::error("This should *never ever* happen, the game will exit now.");
+            std::abort();
+        }
 
         BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
 

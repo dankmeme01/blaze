@@ -5,60 +5,75 @@ using namespace geode::prelude;
 
 namespace blaze {
 
-static void _dbgcheck(const fast_float::from_chars_result& result) {
-#ifdef BLAZE_DEBUG
-    if (result.ec != std::errc{}) {
-        log::warn("float parsing error: {}", (int) result.ec);
-        log::warn("input: {}", result.ptr);
+std::optional<float> parseFloat(std::string_view str) {
+    float out = 0.0f;
+    auto res = fast_float::from_chars(str.data(), str.data() + str.size(), out);
+    if (res.ec != std::errc{}) {
+        return std::nullopt;
     }
-#endif
-}
 
-float parseFloat(std::string_view str) {
-    float out = 0.0f;
-    _dbgcheck(fast_float::from_chars(str.data(), str.data() + str.size(), out));
     return out;
 }
 
-float parseFloat(const char* str) {
+std::optional<float> parseFloat(const char* str) {
     float out = 0.0f;
-    _dbgcheck(fast_float::from_chars(str, str + strlen(str), out));
+    auto res = fast_float::from_chars(str, str + strlen(str), out);
+    if (res.ec != std::errc{}) {
+        return std::nullopt;
+    }
+
     return out;
 }
 
-float parseFloat(const cocos2d::CCString* str) {
+std::optional<float> parseFloat(const cocos2d::CCString* str) {
     return parseFloat(str->getCString());
 }
 
-double parseDouble(std::string_view str) {
+std::optional<double> parseDouble(std::string_view str) {
     double out = 0.0;
-    _dbgcheck(fast_float::from_chars(str.data(), str.data() + str.size(), out));
+    auto res = fast_float::from_chars(str.data(), str.data() + str.size(), out);
+    if (res.ec != std::errc{}) {
+        return std::nullopt;
+    }
+
     return out;
 }
 
-double parseDouble(const char* str) {
+std::optional<double> parseDouble(const char* str) {
     double out = 0.0;
-    _dbgcheck(fast_float::from_chars(str, str + strlen(str), out));
+    auto res = fast_float::from_chars(str, str + strlen(str), out);
+    if (res.ec != std::errc{}) {
+        return std::nullopt;
+    }
+
     return out;
 }
 
-double parseDouble(const cocos2d::CCString* str) {
+std::optional<double> parseDouble(const cocos2d::CCString* str) {
     return parseDouble(str->getCString());
 }
 
-int parseInt(std::string_view str) {
+std::optional<int> parseInt(std::string_view str) {
     int out = 0;
-    _dbgcheck(fast_float::from_chars(str.data(), str.data() + str.size(), out));
+    auto res = fast_float::from_chars(str.data(), str.data() + str.size(), out);
+    if (res.ec != std::errc{}) {
+        return std::nullopt;
+    }
+
     return out;
 }
 
-int parseInt(const char* str) {
+std::optional<int> parseInt(const char* str) {
     int out = 0;
-    _dbgcheck(fast_float::from_chars(str, str + strlen(str), out));
+    auto res = fast_float::from_chars(str, str + strlen(str), out);
+    if (res.ec != std::errc{}) {
+        return std::nullopt;
+    }
+
     return out;
 }
 
-int parseInt(const cocos2d::CCString* str) {
+std::optional<int> parseInt(const cocos2d::CCString* str) {
     return parseInt(str->getCString());
 }
 
