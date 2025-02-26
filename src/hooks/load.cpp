@@ -17,12 +17,27 @@
 #include <settings.hpp>
 #include <tracing.hpp>
 
+#include <sinaps.hpp>
+
 using namespace geode::prelude;
 using hclock = std::chrono::high_resolution_clock;
 
 // mutexes for thread unsafe classes
 static asp::Mutex<> texCacheMutex, sfcacheMutex;
 static GameManager* gm;
+static bool g_canHookGlfw = false;
+
+#ifdef GEODE_IS_WINDOWS
+auto _glfwInitWGL_O = reinterpret_cast<bool (*)()>(geode::base::getCocos() + 0xda4d0);
+auto glfwInit_O = reinterpret_cast<int (*)()>(geode::base::getCocos() + 0xd1020);
+// auto cceglViewCtor_O = reinterpret_cast<CCEGLView* (*)(CCEGLView*)>(geode::base::getCocos() + 0x74530);
+// auto glfwCreateWindow_O = reinterpret_cast<GLFWwindow* (*)(int width, int height, const char* title, GLFWmonitor* monitor, GLFWwindow* share)>(geode::base::getCocos() + 0xd1c40);
+auto _glfwCreateWindowWin32_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*, const void*)>(geode::base::getCocos() + 0xd3bd0);
+auto _glfwCreateContextWGL_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xda050);
+auto createNativeWindow_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xd4fb0);
+auto _glfwRefreshContextAttribs_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*)>(geode::base::getCocos() + 0xd0310);
+
+#endif
 
 // big hack to call a private cocos function
 namespace {
@@ -41,17 +56,6 @@ namespace {
 
     void _addSpriteFramesWithDictionary(CCDictionary* p1, CCTexture2D* p2);
 }
-
-#ifdef GEODE_IS_WINDOWS
-auto glfwInitWGL_O = reinterpret_cast<bool (*)()>(geode::base::getCocos() + 0xda4d0);
-auto glfwInit_O = reinterpret_cast<int (*)()>(geode::base::getCocos() + 0xd1020);
-// auto cceglViewCtor_O = reinterpret_cast<CCEGLView* (*)(CCEGLView*)>(geode::base::getCocos() + 0x74530);
-// auto glfwCreateWindow_O = reinterpret_cast<GLFWwindow* (*)(int width, int height, const char* title, GLFWmonitor* monitor, GLFWwindow* share)>(geode::base::getCocos() + 0xd1c40);
-auto _glfwCreateWindowWin32_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*, const void*)>(geode::base::getCocos() + 0xd3bd0);
-auto _glfwCreateContextWGL_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xda050);
-auto createNativeWindow_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*, const void*)>(geode::base::getCocos() + 0xd4fb0);
-auto _glfwRefreshContextAttribs_O = reinterpret_cast<bool (*)(GLFWwindow*, const void*)>(geode::base::getCocos() + 0xd0310);
-#endif
 
 // AsyncImageLoadRequest - structure that handles the loading of a specific texture
 namespace {
@@ -188,6 +192,7 @@ struct AsyncImageLoadRequest {
 
         // strip .plist extension
         std::string plistPath;
+
         plistPath.reserve(pfsv.size() - sizeof(".plist") + sizeof("-uhd.plist"));
         plistPath.append(pfsv.substr(0, pfsv.size() - sizeof(".plist")));
 
@@ -195,8 +200,10 @@ struct AsyncImageLoadRequest {
             case cocos2d::kTextureQualityLow:
                 plistPath.append(std::string_view(".plist")); break;
             case cocos2d::kTextureQualityMedium:
+                // @geode-ignore(unknown-resource)
                 plistPath.append(std::string_view("-hd.plist")); break;
             case cocos2d::kTextureQualityHigh:
+                // @geode-ignore(unknown-resource)
                 plistPath.append(std::string_view("-uhd.plist")); break;
         }
 
@@ -490,6 +497,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         auto afcache = CCAnimateFrameCache::sharedSpriteFrameCache();
         auto cmanager = CCContentManager::sharedManager();
 
+        // @geode-ignore(unknown-resource)
         afcache->addSpriteFramesWithFile("Robot_AnimDesc.plist");
 
         cmanager->addDict("glassDestroy01.png", false);
@@ -685,13 +693,13 @@ class $modify(CCApplication) {
         // early init glfw
 #ifdef GEODE_IS_WINDOWS
         std::optional<asp::Thread<>> glfwInitThread;
-        if (blaze::settings().asyncGlfw) {
+        if (blaze::settings().asyncGlfw && g_canHookGlfw) {
             glfwInitThread.emplace(asp::Thread<>{});
             glfwInitThread->setLoopFunction([](auto& stopToken) {
                 int result = glfwInit_O();
 
                 if (result == 1) {
-                    bool result2 = glfwInitWGL_O();
+                    bool result2 = _glfwInitWGL_O();
                     if (!result2) {
                         log::warn("_glfwInitWGL failed.");
                     }
@@ -807,7 +815,7 @@ bool _glfwCreateWindowWin32(GLFWwindow* window,
         }
 
         BLAZE_TIMER_STEP("glfwInitWGL");
-        if (!glfwInitWGL_O()) {
+        if (!_glfwInitWGL_O()) {
             return false;
         }
 
@@ -832,8 +840,57 @@ bool _glfwCreateWindowWin32(GLFWwindow* window,
     return true;
 }
 
+template <typename T>
+void _bindFunction(T& func, const char* name, intptr_t address) {
+    if (address == -1) {
+        func = nullptr;
+        g_canHookGlfw = false;
+        log::warn("Sigscanning failed to find {}, GLFW hooking is unavailable.", name);
+    } else {
+        func = reinterpret_cast<T>(address + geode::base::getCocos());
+    }
+}
+
 $execute {
-    if (blaze::settings().asyncGlfw) {
+    g_canHookGlfw = true;
+
+    _bindFunction(_glfwInitWGL_O, "_glfwInitWGL",
+        sinaps::find<
+            "40 57 48 83 EC 50 48 8B ? ? ? ? ? 48 33 C4"
+            >((uint8_t*) geode::base::getCocos(), blaze::cocosImageSize())
+    );
+
+    _bindFunction(glfwInit_O, "glfwInit",
+        sinaps::find<
+            "48 83 EC 28 83 3D ? ? ? ? ? 0F 85"
+            >((uint8_t*) geode::base::getCocos(), blaze::cocosImageSize())
+    );
+
+    _bindFunction(_glfwCreateWindowWin32_O, "_glfwCreateWindowWin32",
+        sinaps::find<
+            "48 89 ? ? ? 48 89 ? ? ? 48 89 ? ? ? 57 48 83 EC 20 49 8B F8 49 8B E9"
+            >((uint8_t*) geode::base::getCocos(), blaze::cocosImageSize())
+    );
+
+    _bindFunction(_glfwCreateContextWGL_O, "_glfwCreateContextWGL",
+        sinaps::find<
+            "48 89 ? ? ? 55 56 57 48 81 EC 00 01 00 00 48 8B ? ? ? ? ? 48 33 C4 48 89 ? ? ? ? ? ? 48 8B ? ? 33 ED"
+            >((uint8_t*) geode::base::getCocos(), blaze::cocosImageSize())
+    );
+
+    _bindFunction(createNativeWindow_O, "createNativeWindow",
+        sinaps::find<
+            "40 55 53 56 57 41 55 41 56"
+            >((uint8_t*) geode::base::getCocos(), blaze::cocosImageSize())
+    );
+
+    _bindFunction(_glfwRefreshContextAttribs_O, "_glfwRefreshContextAttribs",
+        sinaps::find<
+            "40 53 55 57 41 55 41 56 48 83"
+            >((uint8_t*) geode::base::getCocos(), blaze::cocosImageSize())
+    );
+
+    if (blaze::settings().asyncGlfw && g_canHookGlfw) {
         (void) Mod::get()->hook(
             reinterpret_cast<void*>(_glfwCreateWindowWin32_O),
             _glfwCreateWindowWin32,

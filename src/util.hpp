@@ -141,4 +141,9 @@ namespace blaze {
 
         using OwnedMemoryChunk::operator bool;
     };
+
+    // Returns size of the main executable image (Geometry Dash app)
+    size_t imageSize();
+    // Returns size of libcocos2d.dll (if Android, returns the same value as imageSize)
+    size_t cocosImageSize();
 }

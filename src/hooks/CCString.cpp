@@ -11,14 +11,15 @@ using namespace geode::prelude;
 static bool initHook(CCString* self, const char* format, va_list args) {
     ZoneScopedN("CCString::initWithFormatAndValist");
 
+    // Note: this size excludes the null terminator
     int size = std::vsnprintf(nullptr, 0, format, args);
 
 #ifndef GEODE_IS_ANDROID
-    self->m_sString = gd::string(size + 1, '\0');
+    self->m_sString = gd::string(size, '\0');
 #else
-    self->m_sString = gd::string(std::string(size + 1, '\0'));
+    self->m_sString = gd::string(std::string(size, '\0'));
 #endif
-    std::vsnprintf(self->m_sString.data(), self->m_sString.size(), format, args);
+    std::vsnprintf(self->m_sString.data(), self->m_sString.size() + 1, format, args);
 
     return true;
 }

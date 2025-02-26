@@ -49,6 +49,7 @@ CPMAddPackage(
     GIT_TAG "v1.20"
     OPTIONS "LIBDEFLATE_BUILD_SHARED_LIB OFF" "LIBDEFLATE_BUILD_GZIP OFF"
 )
+CPMAddPackage("gh:Prevter/sinaps#1663e86")
 
 if (BLAZE_DEBUG)
     target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_DEBUG=1)
@@ -87,4 +88,4 @@ if (BLAZE_USE_TRACY)
     add_compile_options("-Wno-incompatible-pointer-types")
 endif()
 
-target_link_libraries(${PROJECT_NAME} asp Boost::container simdutf libdeflate_static)
+target_link_libraries(${PROJECT_NAME} asp Boost::container simdutf libdeflate_static sinaps)
