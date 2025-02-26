@@ -5,7 +5,11 @@
 # include <crc32intrin.h>
 #elif defined(ASP_IS_ARM64)
 # include <arm_neon.h>
-# include <sys/auxv.h>
+# ifdef ASP_IS_MACOS
+#  define ASP_ASSUME_HAS_CRC32 // we assume that all arm64 macs have crc32
+# else
+#  include <sys/auxv.h>
+# endif
 #endif
 
 #include <tracing.hpp>
@@ -74,21 +78,24 @@ namespace blaze {
         if (asp::simd::getFeatures().sse4_2) return crc32hw(bytes, len, initial);
         return crc32slow(bytes, len, initial);
 #elif defined(ASP_IS_ARM64)
+# ifdef ASP_ASSUME_HAS_CRC32
+		constexpr bool supportsCrc32 = true;
+# else
 		// TODO https://android.googlesource.com/platform/ndk/+/master/sources/android/cpufeatures/cpu-features.h
-		// tbh this should be moved into aps
+		// tbh this should be moved into asp
 		static bool supportsCrc32 = []{
 			constexpr int hwcapCrc32 = (1 << 7); // asm/hwcap.h
 			auto hwcap = getauxval(AT_HWCAP);
 			return hwcap & hwcapCrc32;
 		}();
-
+# endif
 		if (supportsCrc32) {
 			return crc32hw(bytes, len, initial);
 		} else {
 			return crc32slow(bytes, len, initial);
 		}
 #else
-	return crc32slow(bytes, len, initial);
+		return crc32slow(bytes, len, initial);
 #endif
     }
 
