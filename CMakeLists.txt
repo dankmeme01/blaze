@@ -43,6 +43,12 @@ CPMAddPackage(
     OPTIONS "LIBDEFLATE_BUILD_SHARED_LIB OFF" "LIBDEFLATE_BUILD_GZIP OFF"
 )
 CPMAddPackage("gh:Prevter/sinaps#1663e86")
+CPMAddPackage(
+    NAME pugixml
+    GIT_REPOSITORY "https://github.com/zeux/pugixml.git"
+    GIT_TAG "v1.15"
+)
+CPMAddPackage("gh:dankmeme01/fast_float#b7b17e6")
 
 if (BLAZE_DEBUG)
     target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_DEBUG=1)
@@ -76,4 +82,4 @@ if (BLAZE_USE_TRACY)
     add_compile_options("-Wno-incompatible-pointer-types")
 endif()
 
-target_link_libraries(${PROJECT_NAME} asp simdutf libdeflate_static sinaps)
+target_link_libraries(${PROJECT_NAME} asp simdutf libdeflate_static sinaps fast_float pugixml-static)
