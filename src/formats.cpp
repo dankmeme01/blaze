@@ -9,10 +9,10 @@ using namespace geode::prelude;
 
 namespace blaze {
 
-Result<boost::container::vector<uint8_t>> encodeFPNG(const uint8_t* data, size_t size, uint32_t width, uint32_t height) {
+Result<fast_vector<uint8_t>> encodeFPNG(const uint8_t* data, size_t size, uint32_t width, uint32_t height) {
     ZoneScoped;
 
-    boost::container::vector<uint8_t> out;
+    fast_vector<uint8_t> out;
 
     size_t channels = size / (width * height);
     if (!fpng::fpng_encode_image_to_memory(
@@ -27,7 +27,6 @@ Result<boost::container::vector<uint8_t>> encodeFPNG(const uint8_t* data, size_t
 
     return Ok(std::move(out));
 }
-
 
 #define SPNG_EC(fun) if (auto _ec = (fun) != 0) { \
     spng_ctx_free(ctx); \

@@ -1,5 +1,5 @@
 #pragma once
-#include <boost/container/vector.hpp>
+#include <fast_vector.h>
 #include <Geode/Result.hpp>
 
 namespace blaze {
@@ -15,7 +15,7 @@ struct DecodedImage {
     bool premultiplied;
 };
 
-geode::Result<boost::container::vector<uint8_t>> encodeFPNG(const uint8_t* data, size_t size, uint32_t width, uint32_t height);
+geode::Result<fast_vector<uint8_t>> encodeFPNG(const uint8_t* data, size_t size, uint32_t width, uint32_t height);
 
 geode::Result<DecodedImage> decodeSPNG(const uint8_t* data, size_t size);
 geode::Result<DecodedImage> decodeFPNG(const uint8_t* data, size_t size);

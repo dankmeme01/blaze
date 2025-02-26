@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <util.hpp>
+#include <util/memory_chunk.hpp>
 
 struct libdeflate_compressor;
 struct libdeflate_decompressor;

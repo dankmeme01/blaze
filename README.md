@@ -24,3 +24,10 @@ Note: all those numbers are on Windows. On other operating systems, the performa
 
 * [matcool](https://github.com/matcool) for [Fast Format](https://github.com/matcool/geode-mods/blob/main/fast-format/main.cpp) (i took the entire mod)
 * [cgytrus](https://github.com/cgytrus) for [Algebra Dash](https://github.com/cgytrus/AlgebraDash) (Tracy integration taken from it, the rest of the optimizations were implemented by myself, even if the ideas are similar to ones in Config's mod)
+
+## Used libraries
+
+* [fpng](https://github.com/richgel999/fpng)
+* [spng](https://github.com/randy408/libspng)
+* [miniz](https://github.com/richgel999/miniz)
+* [fast_vector](https://github.com/sigerror/fast-vector)

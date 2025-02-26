@@ -3,6 +3,7 @@
 #include <asp/thread/Thread.hpp>
 #include <asp/sync/Channel.hpp>
 #include <util.hpp>
+#include <util/memory_chunk.hpp>
 
 class LoadManager : public SingletonBase<LoadManager> {
     friend class SingletonBase;

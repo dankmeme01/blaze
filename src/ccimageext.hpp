@@ -4,6 +4,7 @@
 
 #include <formats.hpp>
 #include <util.hpp>
+#include <util/memory_chunk.hpp>
 
 namespace blaze {
 

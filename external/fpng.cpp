@@ -1016,7 +1016,7 @@ do { \
 		// write BFINAL bit
 		PUT_BITS(1, 1);
 
-		std::vector<uint32_t> codes((w + 1) * h);
+		fast_vector<uint32_t> codes((w + 1) * h);
 		uint32_t* pDst_codes = codes.data();
 
 		uint32_t lit_freq[DEFL_MAX_HUFF_SYMBOLS_0];
@@ -1097,6 +1097,9 @@ do { \
 		assert(src_ofs == h * bpl);
 		const uint32_t total_codes = (uint32_t)(pDst_codes - codes.data());
 		assert(total_codes <= codes.size());
+
+		// dank modification: fill the rest of the vector zeros
+		memset(pDst_codes, 0, (codes.size() - total_codes) * sizeof(uint32_t));
 
 		defl_huff dh;
 
@@ -1293,8 +1296,7 @@ do { \
 		// write BFINAL bit
 		PUT_BITS(1, 1);
 
-		std::vector<uint64_t> codes;
-		codes.resize((w + 1) * h);
+		fast_vector<uint64_t> codes((w + 1) * h);
 		uint64_t* pDst_codes = codes.data();
 
 		uint32_t lit_freq[DEFL_MAX_HUFF_SYMBOLS_0];
@@ -1376,6 +1378,9 @@ do { \
 		assert(src_ofs == h * bpl);
 		const uint32_t total_codes = (uint32_t)(pDst_codes - codes.data());
 		assert(total_codes <= codes.size());
+
+		// dank modification: fill the rest of the vector zeros
+		memset(pDst_codes, 0, (codes.size() - total_codes) * sizeof(uint64_t));
 
 		defl_huff dh;
 
@@ -1590,7 +1595,7 @@ do_literals:
 		return dst_ofs;
 	}
 
-	static void vector_append(boost::container::vector<uint8_t>& buf, const void* pData, size_t len)
+	static void vector_append(fast_vector<uint8_t>& buf, const void* pData, size_t len)
 	{
 		if (len)
 		{
@@ -1670,7 +1675,7 @@ do_literals:
 		}
 	}
 
-	bool fpng_encode_image_to_memory(const void* pImage, uint32_t w, uint32_t h, uint32_t num_chans, boost::container::vector<uint8_t>& out_buf, uint32_t flags)
+	bool fpng_encode_image_to_memory(const void* pImage, uint32_t w, uint32_t h, uint32_t num_chans, fast_vector<uint8_t>& out_buf, uint32_t flags)
 	{
 		if (!endian_check())
 		{
@@ -1693,8 +1698,7 @@ do_literals:
 		int i, bpl = w * num_chans;
 		uint32_t y;
 
-		std::vector<uint8_t> temp_buf;
-		temp_buf.resize((bpl + 1) * h + 7);
+		fast_vector<uint8_t> temp_buf((bpl + 1) * h + 7);
 		uint32_t temp_buf_ofs = 0;
 
 		for (y = 0; y < h; ++y)
@@ -1705,6 +1709,9 @@ do_literals:
 			uint8_t* pDst = &temp_buf[temp_buf_ofs];
 
 			apply_filter(y ? 2 : 0, w, h, num_chans, bpl, pSrc, pPrev_src, pDst);
+
+			// dank addition: i dont know if anything relies on this being 0 but setting here just in case
+			temp_buf[temp_buf_ofs + bpl] = 0;
 
 			temp_buf_ofs += 1 + bpl;
 		}
@@ -1749,6 +1756,9 @@ do_literals:
 				uint8_t* pDst = &temp_buf[temp_buf_ofs];
 
 				apply_filter(0, w, h, num_chans, bpl, pSrc, nullptr, pDst);
+
+				// dank addition: i dont know if anything relies on this being 0 but setting here just in case
+				temp_buf[temp_buf_ofs + bpl] = 0;
 
 				temp_buf_ofs += 1 + bpl;
 			}
@@ -1816,7 +1826,7 @@ do_literals:
 #ifndef FPNG_NO_STDIO
 	bool fpng_encode_image_to_file(const char* pFilename, const void* pImage, uint32_t w, uint32_t h, uint32_t num_chans, uint32_t flags)
 	{
-		boost::container::vector<uint8_t> out_buf;
+		fast_vector<uint8_t> out_buf;
 		if (!fpng_encode_image_to_memory(pImage, w, h, num_chans, out_buf, flags))
 			return false;
 
@@ -3093,7 +3103,7 @@ do_literals:
 		return fpng_get_info_internal(pImage, image_size, width, height, channels_in_file, idat_ofs, idat_len);
 	}
 
-	int fpng_decode_memory(const void *pImage, uint32_t image_size, std::vector<uint8_t> &out, uint32_t& width, uint32_t& height, uint32_t &channels_in_file, uint32_t desired_channels)
+	int fpng_decode_memory(const void *pImage, uint32_t image_size, fast_vector<uint8_t>& out, uint32_t& width, uint32_t& height, uint32_t &channels_in_file, uint32_t desired_channels)
 	{
 		out.resize(0);
 		width = 0;
@@ -3149,7 +3159,7 @@ do_literals:
 		return FPNG_DECODE_SUCCESS;
 	}
 
-	// NOTE: fastpng addition
+	// NOTE: dank addition
 	int fpng_decode_memory_ptr(const void *pImage, uint32_t image_size, uint8_t*& out, size_t& outSize, uint32_t& width, uint32_t& height, uint32_t &channels_in_file, uint32_t desired_channels)
 	{
 		width = 0;
@@ -3205,10 +3215,10 @@ do_literals:
 
 		return FPNG_DECODE_SUCCESS;
 	}
-	// NOTE: end fastpng addition
+	// NOTE: end dank addition
 
 #ifndef FPNG_NO_STDIO
-	int fpng_decode_file(const char* pFilename, std::vector<uint8_t>& out, uint32_t& width, uint32_t& height, uint32_t& channels_in_file, uint32_t desired_channels)
+	int fpng_decode_file(const char* pFilename, fast_vector<uint8_t>& out, uint32_t& width, uint32_t& height, uint32_t& channels_in_file, uint32_t desired_channels)
 	{
 		FILE* pFile = nullptr;
 
