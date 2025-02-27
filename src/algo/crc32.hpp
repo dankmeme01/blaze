@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace blaze {
     // Uses the fast crc32 instructions if target machine supports sse4.2/neon, else falls back to a scalar algorithm

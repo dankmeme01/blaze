@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring> // std::memcpy()
-#include <new>
+#include <utility>
 #include <type_traits>
 
 // Helper functions

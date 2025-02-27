@@ -3,6 +3,8 @@
 #include <util.hpp>
 #include <string>
 #include <chrono>
+#include <vector>
+#include <utility>
 
 #ifdef BLAZE_DEBUG
 #define BLAZE_TIMER_START(name) ::TaskTimer __task_timer(name)

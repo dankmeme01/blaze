@@ -1,5 +1,6 @@
 #pragma once
-#include <stddef.h>
+
+#include <cstddef>
 
 namespace blaze {
     // Premultiply alpha using the raw image data from `source` and store it in `dest`.
