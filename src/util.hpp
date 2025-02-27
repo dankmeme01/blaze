@@ -4,6 +4,7 @@
 #include <string>
 #include <new>
 #include <memory>
+#include <fmt/core.h>
 
 #define BLAZE_HOOK_PRIO(func, p) \
     do { auto _xrs = self.setHookPriority(#func, p); \

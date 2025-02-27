@@ -1,6 +1,8 @@
 #include "memory_chunk.hpp"
 #include "memory.hpp"
 
+#include <stdexcept>
+
 namespace blaze {
 
 OwnedMemoryChunk::~OwnedMemoryChunk() {

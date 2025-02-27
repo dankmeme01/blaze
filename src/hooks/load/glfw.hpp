@@ -6,7 +6,6 @@
 # define BLAZE_ASYNC_GLFW_SUPPORTED 1
 
 extern bool g_canHookGlfw;
-#include <Geode/cocos/robtop/glfw/glfw3.h>
 
 namespace blaze {
     void customGlfwInit();

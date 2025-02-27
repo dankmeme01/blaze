@@ -5,6 +5,10 @@
 #include <algo/alpha.hpp>
 #include <tracing.hpp>
 
+#include <Geode/Result.hpp>
+#include <Geode/Prelude.hpp>
+#include <fmt/core.h>
+
 using namespace geode::prelude;
 
 namespace blaze {

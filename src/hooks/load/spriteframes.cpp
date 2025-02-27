@@ -6,6 +6,12 @@
 #include <pugixml.hpp>
 #include <fast_float/fast_float.h>
 
+#include <Geode/loader/Log.hpp>
+#include <Geode/Result.hpp>
+#include <Geode/Prelude.hpp>
+#include <Geode/utils/general.hpp>
+#include <fmt/core.h>
+
 using namespace geode::prelude;
 
 // big hack to call a private cocos function

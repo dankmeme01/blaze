@@ -3,6 +3,9 @@
 #include <util.hpp>
 #include <simdutf.h>
 
+#include <Geode/loader/Log.hpp>
+#include <Geode/Prelude.hpp>
+
 using namespace geode::prelude;
 
 namespace blaze::base64 {

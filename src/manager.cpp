@@ -4,6 +4,12 @@
 #include <formats.hpp>
 #include <tracing.hpp>
 
+#include <Geode/loader/Log.hpp>
+#include <Geode/loader/Mod.hpp>
+#include <Geode/Prelude.hpp>
+#include <Geode/Bindings.hpp>
+
+
 using namespace geode::prelude;
 
 LoadManager::LoadManager() {
@@ -18,7 +24,7 @@ LoadManager::LoadManager() {
         log::error("converter thread failed: {}", exc.what());
 
         Loader::get()->queueInMainThread([msg = std::string(exc.what())] {
-            FLAlertLayer::create("FastPNG error", msg, "Ok")->show();
+            FLAlertLayer::create("Blaze error", msg, "Ok")->show();
         });
     });
 

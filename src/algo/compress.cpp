@@ -1,6 +1,9 @@
 #include "compress.hpp"
 
 #include <libdeflate.h>
+#include <Geode/loader/Log.hpp>
+#include <Geode/Result.hpp>
+#include <Geode/Prelude.hpp>
 
 using namespace geode::prelude;
 

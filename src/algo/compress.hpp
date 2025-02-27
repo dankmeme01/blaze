@@ -1,9 +1,11 @@
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <util.hpp>
 #include <util/memory_chunk.hpp>
+
+#include <Geode/Result.hpp>
 
 struct libdeflate_compressor;
 struct libdeflate_decompressor;

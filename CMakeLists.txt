@@ -4,10 +4,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
+
 project(blaze VERSION 1.0.0)
+
+# Disable PCH, it causes pugixml 1.2 headers to be used
+set(GEODE_DISABLE_PRECOMPILED_HEADERS ON)
 
 option(BLAZE_USE_TRACY "Use tracy" OFF)
 option(BLAZE_DEBUG "Debug mode" OFF)
+option(BLAZE_RELEASE "Release build" OFF)
 
 # source files
 file(GLOB_RECURSE SOURCES
@@ -50,6 +55,10 @@ if (BLAZE_DEBUG)
     target_compile_definitions(${PROJECT_NAME} PRIVATE BLAZE_DEBUG=1)
     target_compile_definitions(asp PRIVATE _HAS_ITERATOR_DEBUGGING=0)
     target_compile_definitions(simdutf PRIVATE _HAS_ITERATOR_DEBUGGING=0)
+endif()
+
+if (BLAZE_RELEASE)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 # silly thing

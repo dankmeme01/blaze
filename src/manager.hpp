@@ -5,6 +5,8 @@
 #include <util.hpp>
 #include <util/memory_chunk.hpp>
 
+#include <filesystem>
+
 class LoadManager : public SingletonBase<LoadManager> {
     friend class SingletonBase;
     LoadManager();

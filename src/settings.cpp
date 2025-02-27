@@ -1,6 +1,7 @@
 #include "settings.hpp"
 
 #include <Geode/loader/Setting.hpp>
+#include <Geode/loader/Mod.hpp>
 
 using namespace geode::prelude;
 

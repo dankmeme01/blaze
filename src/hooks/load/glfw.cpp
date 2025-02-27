@@ -8,6 +8,13 @@
 #include <TaskTimer.hpp>
 #include <settings.hpp>
 
+#include <Geode/loader/Log.hpp>
+#include <Geode/loader/Mod.hpp>
+#include <Geode/Prelude.hpp>
+
+// This should be after glew.h include (which is included by Log.hpp)
+#include <Geode/cocos/robtop/glfw/glfw3.h>
+
 using namespace geode::prelude;
 
 bool g_canHookGlfw = false;

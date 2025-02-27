@@ -10,6 +10,9 @@
 #include <tracing.hpp>
 #include <settings.hpp>
 
+#include <Geode/loader/Log.hpp>
+#include <Geode/Prelude.hpp>
+
 using namespace geode::prelude;
 
 namespace blaze {

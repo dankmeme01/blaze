@@ -1,6 +1,10 @@
 #pragma once
 
-#include <stdint.h>
+#include <vector>
+#include <string_view>
+#include <string>
+#include <cstddef>
+#include <cstdint>
 
 namespace blaze::base64 {
     // Encodes base64 data to a char vector.

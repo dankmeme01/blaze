@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
+#include <utility>
+
 namespace blaze {
     // kinda like unique_ptr<uint8_t[]> but with specified size
     struct OwnedMemoryChunk {

@@ -1,5 +1,8 @@
 #include "memory.hpp"
 
+#include <corecrt_malloc.h>
+#include <new>
+
 namespace blaze {
 
 void* alignedMalloc(size_t size, size_t alignment) {
