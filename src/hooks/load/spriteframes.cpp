@@ -367,9 +367,9 @@ Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t si
         return Err("Unsupported format version: {}", sfdata->metadata.format);
     }
 
-    // TODO: it may be faster to first get the count of frames, and reserve space in the vector.
-    // That is also a linear operation, so I'm not 100% sure it's worth it
-    // size_t n = std::distance(xMainNode.children("name").begin(), xMainNode.children("name").end());
+    // Reserve space in the frames vector
+    size_t frameCount = std::distance(frames.children("key").begin(), frames.children("key").end());
+    sfdata->frames.reserve(frameCount);
 
     // Iterate over the frames
     for (pugi::xml_node keyNode = frames.child("key"); keyNode; keyNode = keyNode.next_sibling("key")) {
