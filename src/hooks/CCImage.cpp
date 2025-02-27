@@ -26,7 +26,12 @@ class $modify(CCImage) {
         // run last since we dont call the originals
         (void) self.setHookPriority("cocos2d::CCImage::initWithImageFile", 9999999).unwrap();
         (void) self.setHookPriority("cocos2d::CCImage::initWithImageFileThreadSafe", 9999999).unwrap();
+
+#ifdef GEODE_IS_MACOS // Mac does not have _initWithPngData
+        (void) self.setHookPriority("cocos2d::CCImage::initWithImageData", 9999999).unwrap();
+#else
         (void) self.setHookPriority("cocos2d::CCImage::_initWithPngData", 9999999).unwrap();
+#endif
     }
 
     bool initWithImageFileCommon(uint8_t* buffer, size_t size, EImageFormat format, const char* path) {
@@ -62,14 +67,32 @@ class $modify(CCImage) {
         return this->initWithImageFile(path, format); // who cares about thread safety?
     }
 
+#ifndef GEODE_IS_MACOS
+    $override
+    bool initWithImageData(void* data, int size, EImageFormat format, int a, int b, int c, int d) {
+        // If this is a PNG image, use spng
+        if (format != CCImage::EImageFormat::kFmtPng) {
+            return CCImage::initWithImageData(data, size, format, a, b, c, d);
+        }
+
+        auto res = this->ext()->initWithSPNG(data, size);
+        if (res) {
+            return true;
+        } else {
+            log::warn("CCImage hook: initWithSPNG failed", res.unwrapErr());
+            return false;
+        }
+    }
+#else
     $override
     bool _initWithPngData(void* data, int size) {
         auto res = this->ext()->initWithSPNG(data, size);
         if (!res) {
-            log::warn("{}", res.unwrapErr());
+            log::warn("CCImage hook: initWithSPNG failed", res.unwrapErr());
             return false;
         }
 
         return true;
     }
+#endif
 };

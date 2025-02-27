@@ -11,6 +11,7 @@ namespace blaze {
 
         if (!settings._init) {
             settings._init = true;
+            settings.fastDecompression = Mod::get()->getSettingValue<bool>("faster-decompression");
             settings.imageCache = Mod::get()->getSettingValue<bool>("image-cache");
             settings.imageCacheSmall = Mod::get()->getSettingValue<bool>("image-cache-small");
             settings.asyncGlfw = Mod::get()->getSettingValue<bool>("async-glfw");

@@ -13,6 +13,13 @@
 	"description": "Optimization mod",
 	"early-load": true,
 	"settings": {
+		"faster-decompression": {
+			"name": "Fast Save Loading",
+			"type": "bool",
+			"description": "Speeds up decompression of the save file, making game loading significantly faster. Could",
+			"default": true,
+			"requires-restart": true
+		},
 		"image-cache": {
 			"name": "Image cache",
 			"type": "bool",
@@ -30,6 +37,7 @@
 			"type": "bool",
 			"description": "<cp>Note: experimental!</c>\n\nPre-initializes GLFW on a different thread, while doing other loading tasks in parallel. May be unstable and cause crashes.",
 			"default": false,
+			"requires-restart": true,
 			"platforms": [
 				"win"
 			]
@@ -39,6 +47,7 @@
 			"type": "bool",
 			"description": "<cp>Note: experimental!</c>\n\nInitializes FMOD on a different thread, while doing other loading tasks in parallel. May be unstable and cause crashes.",
 			"default": false,
+			"requires-restart": true,
 			"platforms": [
 				"win"
 			]
@@ -47,13 +56,15 @@
 			"name": "Fast Saving",
 			"type": "bool",
 			"description": "Use a significantly faster compressor to save data to your savefile. Prevents the game for hanging for a few seconds every time it's closed.",
-			"default": true
+			"default": true,
+			"requires-restart": false
 		},
 		"uncompressed-saves": {
 			"name": "Uncompressed Save",
 			"type": "bool",
 			"description": "Stores the save data without compression, resulting in slightly faster loading & saving times.\n\n<cy>Note: this may increase the size of your savefile by up to 50%.</c>",
-			"default": false
+			"default": false,
+			"requires-restart": false
 		}
 	},
 	"resources": {

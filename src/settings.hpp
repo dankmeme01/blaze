@@ -3,6 +3,7 @@
 namespace blaze {
     struct _settings {
         bool _init = false;
+        bool fastDecompression = false;
         bool imageCache = false;
         bool imageCacheSmall = false;
         bool asyncGlfw = false;

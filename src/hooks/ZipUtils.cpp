@@ -38,9 +38,28 @@ class $modify(ZipUtils) {
                 h.unwrap()->setAutoEnable(false);
             }
         }
+
+        if (!blaze::settings().fastDecompression) {
+            if (auto h = self.getHook("cocos2d::ZipUtils::decompressString")) {
+                h.unwrap()->setAutoEnable(false);
+            }
+
+            if (auto h = self.getHook("cocos2d::ZipUtils::decompressString2")) {
+                h.unwrap()->setAutoEnable(false);
+            }
+
+            if (auto h = self.getHook("cocos2d::ZipUtils::ccInflateMemory")) {
+                h.unwrap()->setAutoEnable(false);
+            }
+
+            if (auto h = self.getHook("cocos2d::ZipUtils::ccInflateMemoryWithHint")) {
+                h.unwrap()->setAutoEnable(false);
+            }
+        }
     }
 
 #if BLAZE_HOOK_DECOMPRESS
+    $override
     static int ccInflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
         blaze::Decompressor dec;
         auto chunk = dec.decompressToChunk(input, size);
@@ -56,10 +75,12 @@ class $modify(ZipUtils) {
         return outSize;
     }
 
+    $override
     static int ccInflateMemoryWithHint(unsigned char* input, unsigned int size, unsigned char** outp, unsigned int hint) {
         return ccInflateMemory(input, size, outp);
     }
 
+    $override
     static gd::string decompressString(gd::string const& input, bool encrypted, int key) {
         if (input.empty()) {
             return "";
@@ -97,6 +118,7 @@ class $modify(ZipUtils) {
         return ZipUtils::decompressString(input, encrypted, key);
     }
 
+    $override
     static gd::string decompressString2(unsigned char* data, bool encrypted, int size, int key) {
         if (!data || size < 1) {
             return ""; // TODO is it just "" or "\0" idk
@@ -150,6 +172,7 @@ class $modify(ZipUtils) {
 #endif
 
 #if BLAZE_HOOK_COMPRESS
+    $override
     static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
         blaze::Compressor compressor(compressionMode());
         compressor.setMode(blaze::CompressionMode::Gzip);
@@ -162,6 +185,7 @@ class $modify(ZipUtils) {
         return outSize;
     }
 
+    $override
     static gd::string compressString(gd::string const& data, bool encrypt, int key) {
         BLAZE_TIMER_START("compressString compression");
 

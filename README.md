@@ -5,11 +5,11 @@ Geometry Dash mod aimed at improving performance. Currently it mostly touches ga
 Feats:
 
 * Up to 500-700% faster savefile saving - no more hangs when closing the game
+* 30-40% faster savefile loading
 * Multithreaded game resource loading, up to 200-400% faster
 * 5-10% faster CCString creation
 * Faster loading of textures from any mod (faster image decoding library & optional image caching)
 * No custom formats - mod can be safely uninstalled and your savefile will still load
-* 30-40% faster savefile loading (disabled by default for safety)
 * Parallelized audio engine loading (experimental, disabled by default, unavailable on Android)
 * Parallelized GLFW setup (experimental, disabled by default)
 

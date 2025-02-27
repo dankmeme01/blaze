@@ -39,7 +39,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE src/)
 # make spng use miniz instead of zlib
 target_compile_definitions(${PROJECT_NAME} PRIVATE SPNG_USE_MINIZ=1 SPNG_STATIC=1)
 
-CPMAddPackage("gh:dankmeme01/asp2#07bc092")
+CPMAddPackage("gh:dankmeme01/asp2#82babf7f")
 CPMAddPackage("gh:simdutf/simdutf#83c0e74")
 CPMAddPackage(
     NAME libdeflate
@@ -88,7 +88,3 @@ if (BLAZE_USE_TRACY)
 endif()
 
 target_link_libraries(${PROJECT_NAME} asp simdutf libdeflate_static sinaps fast_float pugixml-static)
-
-if (WIN32)
-    target_link_libraries(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/external/clang_rt.builtins-x86_64.lib")
-endif()
