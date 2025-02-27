@@ -23,6 +23,7 @@ struct SpriteFrame {
 struct SpriteFrameData {
     struct Metadata {
         int format = -1;
+        const char* textureFileName = "";
     } metadata;
 
     pugi::xml_document doc;

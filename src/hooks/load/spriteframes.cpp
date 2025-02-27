@@ -365,7 +365,14 @@ Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t si
 
         if (strcmp(keyName, "format") == 0) {
             sfdata->metadata.format = parseNode<int>(valueNode).value_or(-1);
-            break; // Remove the break if we will need other properties in the future
+
+#ifndef BLAZE_DEBUG
+            break; // we only need the format version, break early if not in debug mode
+#endif
+        }
+
+        if (strcmp(keyName, "realTextureFileName") == 0) {
+            sfdata->metadata.textureFileName = valueNode.child_value();
         }
     }
 
@@ -373,9 +380,9 @@ Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t si
         return Err("Unsupported format version: {}", sfdata->metadata.format);
     }
 
-    // Reserve space in the frames vector
-    size_t frameCount = std::distance(frames.children("key").begin(), frames.children("key").end());
-    sfdata->frames.reserve(frameCount);
+    // Note: one could try and optimize this by counting the amount of children and reserving space in the `sfData->frames`.
+    // In my tests this proved to be ever so slightly slower, although it could depend on the platform and device.
+    // Therefore this optimization was not done here.
 
     // Iterate over the frames
     for (pugi::xml_node keyNode = frames.child("key"); keyNode; keyNode = keyNode.next_sibling("key")) {
