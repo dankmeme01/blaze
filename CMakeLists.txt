@@ -21,6 +21,17 @@ file(GLOB_RECURSE SOURCES
     external/*.cpp
 )
 
+# objc sources
+file(GLOB OBJC_SOURCES
+	src/hooks/load.mm
+)
+set_source_files_properties(${OBJC_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+# add objc sources
+if (APPLE)
+    list(APPEND SOURCES ${OBJC_SOURCES})
+endif()
+
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 if (NOT DEFINED ENV{GEODE_SDK})

@@ -2,6 +2,8 @@
 //
 // Completely rewrites the loading logic to be multithreaded.
 
+#include "load.hpp"
+
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LoadingLayer.hpp>
 #include <Geode/modify/CCApplication.hpp>
@@ -23,9 +25,6 @@
 #include "load/glfw.hpp"
 #include "load/spriteframes.hpp"
 
-#ifdef GEODE_IS_MACOS
-# import <Foundation/Foundation.h>
-#endif
 
 using namespace geode::prelude;
 using namespace asp::time;
@@ -673,7 +672,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     }
 };
 
-void startPreInit() {
+void blaze::startPreInit() {
     g_ccApplicationRunTime = Instant::now();
 
     // Check if our compile-time crc32 algorithm works correctly (should never fail, but we'll keep as a sanity check)
@@ -785,32 +784,9 @@ void startPreInit() {
 #ifndef GEODE_IS_MACOS
 class $modify(CCApplication) {
     int run() {
-        startPreInit();
+        blaze::startPreInit();
 
         // finally go back to running the rest of the game
         return CCApplication::run();
     }
 };
-#else
-
-static void(*s_applicationDidFinishLaunchingOrig)(void*, SEL, NSNotification*);
-
-void appControllerHook(void* self, SEL sel, NSNotification* notif) {
-    startPreInit();
-
-    // finally go back to running the rest of the game
-    return s_applicationDidFinishLaunchingOrig(self, sel, notif);
-}
-
-$execute {
-    s_applicationDidFinishLaunchingOrig = reinterpret_cast<decltype(s_applicationDidFinishLaunchingOrig)>(geode::base::get() + 0x98cc);
-
-    (void) Mod::get()->hook(
-        reinterpret_cast<void*>(s_applicationDidFinishLaunchingOrig),
-        &appControllerHook,
-        "AppController::applicationDidFinishLaunching",
-        tulip::hook::TulipConvention::Default
-    );
-}
-
-#endif
