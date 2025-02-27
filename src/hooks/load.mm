@@ -3,7 +3,6 @@
 
 #ifdef GEODE_IS_MACOS
 # import <Foundation/Foundation.h>
-#endif
 
 static void(*s_applicationDidFinishLaunchingOrig)(void*, SEL, NSNotification*);
 
@@ -24,3 +23,5 @@ $execute {
         tulip::hook::TulipConvention::Default
     );
 }
+
+#endif

@@ -790,3 +790,4 @@ class $modify(CCApplication) {
         return CCApplication::run();
     }
 };
+#endif
