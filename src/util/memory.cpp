@@ -4,6 +4,7 @@
 #include <corecrt_malloc.h>
 #endif
 
+#include <Geode/loader/Log.hpp>
 #include <new>
 
 namespace blaze {

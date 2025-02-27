@@ -23,6 +23,10 @@
 #include "load/glfw.hpp"
 #include "load/spriteframes.hpp"
 
+#ifdef GEODE_IS_MACOS
+# import <Foundation/Foundation.h>
+#endif
+
 using namespace geode::prelude;
 using namespace asp::time;
 
@@ -669,114 +673,144 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     }
 };
 
-class $modify(CCApplication) {
-    int run() {
-        g_ccApplicationRunTime = Instant::now();
+void startPreInit() {
+    g_ccApplicationRunTime = Instant::now();
 
-        // Check if our compile-time crc32 algorithm works correctly (should never fail, but we'll keep as a sanity check)
-        if (blaze::hashStringRuntime("hai uwu") != BLAZE_STRING_HASH("hai uwu")) {
-            log::error("ERROR: blaze detected abnormality in the hashing algorithm.");
-            log::error("Mismatch between runtime and compile-time hashing algorithms was detected,");
-            log::error("- Value computed at compile time: 0x{:08x}", BLAZE_STRING_HASH("hai uwu"));
-            log::error("- Value computed at runtime: 0x{:08x}", blaze::hashStringRuntime("hai uwu"));
-            log::error("");
-            log::error("This should *never ever* happen, the game will exit now.");
-            std::abort();
-        }
+    // Check if our compile-time crc32 algorithm works correctly (should never fail, but we'll keep as a sanity check)
+    if (blaze::hashStringRuntime("hai uwu") != BLAZE_STRING_HASH("hai uwu")) {
+        log::error("ERROR: blaze detected abnormality in the hashing algorithm.");
+        log::error("Mismatch between runtime and compile-time hashing algorithms was detected,");
+        log::error("- Value computed at compile time: 0x{:08x}", BLAZE_STRING_HASH("hai uwu"));
+        log::error("- Value computed at runtime: 0x{:08x}", blaze::hashStringRuntime("hai uwu"));
+        log::error("");
+        log::error("This should *never ever* happen, the game will exit now.");
+        std::abort();
+    }
 
-        BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
+    BLAZE_TIMER_START("CCApplication::run (managers pre-setup)");
 
-        // early init glfw
+    // early init glfw
 #ifdef GEODE_IS_WINDOWS
-        std::optional<asp::Thread<>> glfwInitThread;
-        if (blaze::settings().asyncGlfw && g_canHookGlfw) {
-            glfwInitThread.emplace(asp::Thread<>{});
-            glfwInitThread->setLoopFunction([](auto& stopToken) {
-                blaze::customGlfwInit();
-                stopToken.stop();
-            });
-            glfwInitThread->start();
-        }
-#endif
-
-        CCFileUtils::get()->addSearchPath("Resources");
-
-        // initialize gamemanager, we have to do it on main thread right here
-        gm = GameManager::get();
-
-        // setup fmod asynchronously
-#ifndef GEODE_IS_ANDROID
-        FMODAudioEngine::get()->setup();
-#endif
-
-        // initialize llm in another thread.
-        // we can only do this if we carefully checked that all the functions afterwards are thread-safe and do not call autorelease
-        asp::Thread<> llmLoadThread;
-        llmLoadThread.setLoopFunction([](auto& stopToken) {
-            LocalLevelManager::get();
+    std::optional<asp::Thread<>> glfwInitThread;
+    if (blaze::settings().asyncGlfw && g_canHookGlfw) {
+        glfwInitThread.emplace(asp::Thread<>{});
+        glfwInitThread->setLoopFunction([](auto& stopToken) {
+            blaze::customGlfwInit();
             stopToken.stop();
         });
-        llmLoadThread.start();
-
-        // set appropriate texture quality
-        auto tq = gm->m_texQuality;
-        CCDirector::get()->updateContentScale((TextureQuality)tq);
-        CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
-
-        BLAZE_TIMER_STEP("preparation for asset preloading");
-
-        // Init threadpool
-        s_loadThreadPool.emplace(asp::ThreadPool{});
-
-        auto resources1 = getLoadingLayerResources();
-        auto resources2 = getGameResources();
-
-        // Load images
-
-        for (auto& img : resources1) {
-            s_loadThreadPool->pushTask([&img] {
-                auto res = img.loadImage();
-                if (!res) {
-                    log::warn("Failed to initialize image: {}", res.unwrapErr());
-                }
-            });
-        }
-
-        for (auto& img : resources2) {
-            s_loadThreadPool->pushTask([&img] {
-                auto res = img.loadImage();
-                if (!res) {
-                    log::warn("Failed to initialize image: {}", res.unwrapErr());
-                }
-            });
-        }
-
-        // wait for all images to be preloaded (should be pretty quick, they are not decoded yet)
-        s_loadThreadPool->join();
-
-        // start decoding the images in background
-        asyncLoadLoadingLayerResources<true>(std::move(resources1));
-
-        // rest of the images (for the game itself)
-        asyncLoadGameResources<true>(std::move(resources2));
-
-        CCFileUtils::get()->removeSearchPath("Resources");
-
-        // wait until llm finishes initialization
-        BLAZE_TIMER_STEP("Wait for LLM init job to finish");
-        llmLoadThread.join();
-
-#ifdef GEODE_IS_WINDOWS
-        if (glfwInitThread) {
-            BLAZE_TIMER_STEP("Wait for async GLFW job to finish");
-            glfwInitThread->join();
-        }
+        glfwInitThread->start();
+    }
 #endif
 
-        BLAZE_TIMER_END();
+    CCFileUtils::get()->addSearchPath("Resources");
+
+    BLAZE_TIMER_STEP("GameManager::init");
+
+    // initialize gamemanager, we have to do it on main thread right here
+    // TODO: do we really?
+    gm = GameManager::get();
+
+    // setup fmod asynchronously
+    #ifndef GEODE_IS_ANDROID
+    FMODAudioEngine::get()->setup();
+    #endif
+
+    // initialize llm in another thread.
+    // we can only do this if we carefully checked that all the functions afterwards are thread-safe and do not call autorelease
+    asp::Thread<> llmLoadThread;
+    llmLoadThread.setLoopFunction([](auto& stopToken) {
+        LocalLevelManager::get();
+        stopToken.stop();
+    });
+    llmLoadThread.start();
+
+    BLAZE_TIMER_STEP("Preparation for asset preloading");
+
+    // set appropriate texture quality
+    auto tq = gm->m_texQuality;
+    CCDirector::get()->updateContentScale((TextureQuality)tq);
+    CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
+
+    // Init threadpool
+    s_loadThreadPool.emplace(asp::ThreadPool{});
+
+    auto resources1 = getLoadingLayerResources();
+    auto resources2 = getGameResources();
+
+    // Load images
+
+    for (auto& img : resources1) {
+        s_loadThreadPool->pushTask([&img] {
+            auto res = img.loadImage();
+            if (!res) {
+                log::warn("Failed to initialize image: {}", res.unwrapErr());
+            }
+        });
+    }
+
+    for (auto& img : resources2) {
+        s_loadThreadPool->pushTask([&img] {
+            auto res = img.loadImage();
+            if (!res) {
+                log::warn("Failed to initialize image: {}", res.unwrapErr());
+            }
+        });
+    }
+
+    // wait for all images to be preloaded (should be pretty quick, they are not decoded yet)
+    s_loadThreadPool->join();
+
+    // start decoding the images in background
+    asyncLoadLoadingLayerResources<true>(std::move(resources1));
+
+    // rest of the images (for the game itself)
+    asyncLoadGameResources<true>(std::move(resources2));
+
+    CCFileUtils::get()->removeSearchPath("Resources");
+
+    // wait until llm finishes initialization
+    BLAZE_TIMER_STEP("Wait for LLM init job to finish");
+    llmLoadThread.join();
+
+#ifdef GEODE_IS_WINDOWS
+    if (glfwInitThread) {
+        BLAZE_TIMER_STEP("Wait for async GLFW job to finish");
+        glfwInitThread->join();
+    }
+#endif
+
+    BLAZE_TIMER_END();
+}
+
+#ifndef GEODE_IS_MACOS
+class $modify(CCApplication) {
+    int run() {
+        startPreInit();
 
         // finally go back to running the rest of the game
-
         return CCApplication::run();
     }
 };
+#else
+
+static void(*s_applicationDidFinishLaunchingOrig)(void*, SEL, NSNotification*);
+
+void appControllerHook(void* self, SEL sel, NSNotification* notif) {
+    startPreInit();
+
+    // finally go back to running the rest of the game
+    return s_applicationDidFinishLaunchingOrig(self, sel, notif);
+}
+
+$execute {
+    s_applicationDidFinishLaunchingOrig = reinterpret_cast<decltype(s_applicationDidFinishLaunchingOrig)>(geode::base::get() + 0x98cc);
+
+    (void) Mod::get()->hook(
+        reinterpret_cast<void*>(s_applicationDidFinishLaunchingOrig),
+        &appControllerHook,
+        "AppController::applicationDidFinishLaunching",
+        tulip::hook::TulipConvention::Default
+    );
+}
+
+#endif
