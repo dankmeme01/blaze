@@ -3,9 +3,10 @@
 #include <Geode/loader/Log.hpp>
 
 using namespace geode::prelude;
+using namespace asp::time;
 
-static std::string formatMeasurement(std::string_view name, std::chrono::nanoseconds timeTook) {
-    return fmt::format("{} - {}", name, formatDuration(timeTook));
+static std::string formatMeasurement(std::string_view name, asp::time::Duration timeTook) {
+    return fmt::format("{} - {}", name, timeTook.toString());
 }
 
 std::string TaskTimer::Summary::format() {
@@ -15,7 +16,7 @@ std::string TaskTimer::Summary::format() {
         out += formatMeasurement(name, timeTook);
         out += "\n";
     }
-    out += fmt::format("Total time: {}\n", formatDuration(totalTime));
+    out += fmt::format("Total time: {}\n", totalTime.toString());
 
     return out;
 }
@@ -25,7 +26,7 @@ void TaskTimer::Summary::print() {
     for (auto& [name, timeTook] : measurements) {
         log::debug("{}", formatMeasurement(name, timeTook));
     }
-    log::debug("Total time: {}", formatDuration(totalTime));
+    log::debug("Total time: {}", totalTime.toString());
     log::debug("==================================");
 }
 
@@ -44,7 +45,7 @@ TaskTimer::~TaskTimer() {
 }
 
 void TaskTimer::step(std::string_view stepName) {
-    auto timer = std::chrono::high_resolution_clock::now();
+    auto timer = Instant::now();
 
     if (currentStep.empty()) {
         this->currentStep = stepName;
@@ -53,7 +54,7 @@ void TaskTimer::step(std::string_view stepName) {
         return;
     }
 
-    auto passed = std::chrono::duration_cast<std::chrono::nanoseconds>(timer - this->currentStepTime);
+    auto passed = timer.durationSince(this->currentStepTime);
     auto measurement = std::make_pair(currentStep, passed);
 
     this->currentStepTime = timer;
@@ -67,7 +68,7 @@ TaskTimer::Summary TaskTimer::finish() {
         this->step("");
     }
 
-    Summary summary(std::move(measurements), std::chrono::high_resolution_clock::now() - this->firstStepTime);
+    Summary summary(std::move(measurements), this->firstStepTime.elapsed());
     this->reset();
     return summary;
 }

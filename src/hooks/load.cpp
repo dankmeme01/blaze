@@ -9,6 +9,8 @@
 #include <asp/sync/Mutex.hpp>
 #include <asp/thread/ThreadPool.hpp>
 #include <asp/thread/Thread.hpp>
+#include <asp/time/Instant.hpp>
+#include <asp/time/Duration.hpp>
 
 #include <hooks/FMODAudioEngine.hpp>
 #include <TaskTimer.hpp>
@@ -22,7 +24,7 @@
 #include "load/spriteframes.hpp"
 
 using namespace geode::prelude;
-using hclock = std::chrono::high_resolution_clock;
+using namespace asp::time;
 
 // mutexes for thread unsafe classes
 static asp::Mutex<> texCacheMutex, sfcacheMutex;
@@ -276,8 +278,8 @@ static std::vector<AsyncImageLoadRequest> getGameResources() {
 #undef MAKE_IMG
 #undef MAKE_FONT
 
-static hclock::time_point g_launchTime = hclock::now(); // right when the binary is loaded
-static hclock::time_point g_ccApplicationRunTime{};
+static Instant g_launchTime = Instant::now(); // right when the binary is loaded
+static Instant g_ccApplicationRunTime{};
 static std::optional<asp::ThreadPool> s_loadThreadPool{};
 
 struct PreLoadStageData {
@@ -363,9 +365,9 @@ static void asyncLoadGameResources(std::vector<AsyncImageLoadRequest>&& resource
 class $modify(MyLoadingLayer, LoadingLayer) {
     struct Fields {
         bool finishedLoading = false;
-        hclock::time_point startedLoadingGame;
-        hclock::time_point finishedLoadingGame;
-        hclock::time_point startedLoadingAssets;
+        Instant startedLoadingGame;
+        Instant finishedLoadingGame;
+        Instant startedLoadingAssets;
     };
 
     static void onModify(auto& self) {
@@ -374,7 +376,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     }
 
     bool init(bool fromReload) {
-        m_fields->startedLoadingGame = hclock::now();
+        m_fields->startedLoadingGame = Instant::now();
 
         BLAZE_TIMER_START("(LoadingLayer::init) Initial setup");
 
@@ -443,7 +445,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         acm->addAction(action, this, false);
 
-        m_fields->finishedLoadingGame = hclock::now();
+        m_fields->finishedLoadingGame = Instant::now();
 
         BLAZE_TIMER_END();
 
@@ -455,7 +457,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
         BLAZE_TIMER_START("(customLoadStep) Task queueing");
 
-        m_fields->startedLoadingAssets = hclock::now();
+        m_fields->startedLoadingAssets = Instant::now();
 
         auto tcache = CCTextureCache::get();
         auto sfcache = CCSpriteFrameCache::get();
@@ -565,26 +567,26 @@ class $modify(MyLoadingLayer, LoadingLayer) {
     }
 
     void finishLoading() {
-        auto finishTime = hclock::now();
+        auto finishTime = Instant::now();
 
-        hclock::duration tookTimeFull;
+        Duration tookTimeFull;
         if (m_fromRefresh) {
-            tookTimeFull = finishTime - m_fields->startedLoadingGame;
+            tookTimeFull = finishTime.durationSince(m_fields->startedLoadingGame);
         } else {
-            tookTimeFull = finishTime - g_launchTime;
+            tookTimeFull = finishTime.durationSince(g_launchTime);
         }
 
-        log::info("{} took {}, handing off..", m_fromRefresh ? "Reloading" : "Loading", formatDuration(tookTimeFull));
+        log::info("{} took {}, handing off..", m_fromRefresh ? "Reloading" : "Loading", tookTimeFull.toString());
 
 #ifdef BLAZE_DEBUG
         if (!m_fromRefresh) {
-            log::debug("- Geode entry remainder: {}", formatDuration(g_ccApplicationRunTime - g_launchTime));
-            log::debug("- Initial game setup: {}", formatDuration(m_fields->startedLoadingGame - g_ccApplicationRunTime));
+            log::debug("- Geode entry remainder: {}", g_ccApplicationRunTime.durationSince(g_launchTime).toString());
+            log::debug("- Initial game setup: {}", m_fields->startedLoadingGame.durationSince(g_ccApplicationRunTime).toString());
         }
 
-        log::debug("- Pre-loading: {}", formatDuration(m_fields->finishedLoadingGame - m_fields->startedLoadingGame));
-        log::debug("- Delay before asset loading: {}", formatDuration(m_fields->startedLoadingAssets - m_fields->finishedLoadingGame));
-        log::debug("- Asset loading: {}", formatDuration(finishTime - m_fields->startedLoadingAssets));
+        log::debug("- Pre-loading: {}", m_fields->finishedLoadingGame.durationSince(m_fields->startedLoadingGame).toString());
+        log::debug("- Delay before asset loading: {}", m_fields->startedLoadingAssets.durationSince(m_fields->finishedLoadingGame).toString());
+        log::debug("- Asset loading: {}", finishTime.durationSince(m_fields->startedLoadingAssets).toString());
 #endif
 
         m_fields->finishedLoading = true;
@@ -669,7 +671,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
 class $modify(CCApplication) {
     int run() {
-        g_ccApplicationRunTime = hclock::now();
+        g_ccApplicationRunTime = Instant::now();
 
         // Check if our compile-time crc32 algorithm works correctly (should never fail, but we'll keep as a sanity check)
         if (blaze::hashStringRuntime("hai uwu") != BLAZE_STRING_HASH("hai uwu")) {

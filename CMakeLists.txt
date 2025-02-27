@@ -39,7 +39,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE src/)
 # make spng use miniz instead of zlib
 target_compile_definitions(${PROJECT_NAME} PRIVATE SPNG_USE_MINIZ=1 SPNG_STATIC=1)
 
-CPMAddPackage("gh:dankmeme01/asp2#8e25afa")
+CPMAddPackage("gh:dankmeme01/asp2#9911ec4")
 CPMAddPackage("gh:simdutf/simdutf#83c0e74")
 CPMAddPackage(
     NAME libdeflate

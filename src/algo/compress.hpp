@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 #include <util.hpp>
 #include <util/memory_chunk.hpp>
 

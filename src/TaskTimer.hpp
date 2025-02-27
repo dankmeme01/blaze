@@ -2,9 +2,12 @@
 
 #include <util.hpp>
 #include <string>
-#include <chrono>
 #include <vector>
 #include <utility>
+
+#include <asp/time/SystemTime.hpp>
+#include <asp/time/Instant.hpp>
+#include <asp/time/Duration.hpp>
 
 #ifdef BLAZE_DEBUG
 #define BLAZE_TIMER_START(name) ::TaskTimer __task_timer(name)
@@ -17,24 +20,24 @@
 #endif
 
 class TaskTimer {
-    std::vector<std::pair<std::string, std::chrono::nanoseconds>> measurements;
+    std::vector<std::pair<std::string, asp::time::Duration>> measurements;
     std::string currentStep;
-    std::chrono::high_resolution_clock::time_point currentStepTime;
-    std::chrono::high_resolution_clock::time_point firstStepTime;
+    asp::time::Instant currentStepTime;
+    asp::time::Instant firstStepTime;
 
 public:
     TaskTimer(std::string_view name);
     ~TaskTimer();
 
     struct Summary {
-        std::vector<std::pair<std::string, std::chrono::nanoseconds>> measurements;
-        std::chrono::nanoseconds totalTime;
+        std::vector<std::pair<std::string, asp::time::Duration>> measurements;
+        asp::time::Duration totalTime;
 
         std::string format();
         void print();
 
-        Summary(const decltype(measurements)& m, std::chrono::nanoseconds total) : measurements(m), totalTime(total) {}
-        Summary(decltype(measurements)&& m, std::chrono::nanoseconds total) : measurements(std::move(m)), totalTime(total) {}
+        Summary(const decltype(measurements)& m, asp::time::Duration total) : measurements(m), totalTime(total) {}
+        Summary(decltype(measurements)&& m, asp::time::Duration total) : measurements(std::move(m)), totalTime(total) {}
     };
 
     void step(std::string_view stepName);
