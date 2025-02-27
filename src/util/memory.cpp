@@ -1,6 +1,9 @@
 #include "memory.hpp"
 
+#ifdef _MSC_VER
 #include <corecrt_malloc.h>
+#endif
+
 #include <new>
 
 namespace blaze {
