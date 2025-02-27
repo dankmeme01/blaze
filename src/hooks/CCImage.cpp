@@ -67,7 +67,7 @@ class $modify(CCImage) {
         return this->initWithImageFile(path, format); // who cares about thread safety?
     }
 
-#ifndef GEODE_IS_MACOS
+#ifdef GEODE_IS_MACOS
     $override
     bool initWithImageData(void* data, int size, EImageFormat format, int a, int b, int c, int d) {
         // If this is a PNG image, use spng
