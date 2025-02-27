@@ -668,7 +668,12 @@ class $modify(MyLoadingLayer, LoadingLayer) {
         auto txareaPos = m_textArea->getPosition();
         groove->setPosition({m_caption->getPosition().x, txareaPos.y + 40.f});
 
+        // TODO
+#ifndef GEODE_IS_MACOS
         this->updateProgress(0);
+#else
+        m_sliderBar->setScaleX(0.f);
+#endif
     }
 };
 
