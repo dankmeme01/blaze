@@ -4,6 +4,8 @@
 // Does very minimal heap allocations, uses fast XML and float parsers.
 // Proves to be ~8-9 times faster than the cocos2d implementation (on Windows)
 
+#include <pugixml.hpp>
+
 #include <Geode/Result.hpp>
 #include <cocos2d.h>
 

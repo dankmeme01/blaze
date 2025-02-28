@@ -3,7 +3,6 @@
 #include <util/hash.hpp>
 #include <util.hpp>
 
-#include <pugixml.hpp>
 #include <fast_float/fast_float.h>
 
 #include <Geode/loader/Log.hpp>
