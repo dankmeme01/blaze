@@ -2,7 +2,9 @@
 #include <Geode/Geode.hpp>
 
 #ifdef GEODE_IS_MACOS
+#define CommentType CommentTypeDummy
 # import <Foundation/Foundation.h>
+#undef CommentType
 
 static void(*s_applicationDidFinishLaunchingOrig)(void*, SEL, NSNotification*);
 
@@ -16,7 +18,7 @@ void appControllerHook(void* self, SEL sel, NSNotification* notif) {
 $execute {
     s_applicationDidFinishLaunchingOrig = reinterpret_cast<decltype(s_applicationDidFinishLaunchingOrig)>(geode::base::get() + 0x98cc);
 
-    (void) Mod::get()->hook(
+    (void) geode::Mod::get()->hook(
         reinterpret_cast<void*>(s_applicationDidFinishLaunchingOrig),
         &appControllerHook,
         "AppController::applicationDidFinishLaunching",
