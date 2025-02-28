@@ -9,7 +9,7 @@ project(blaze VERSION 1.0.0)
 # Disable PCH, it causes pugixml 1.2 headers to be used
 set(GEODE_DISABLE_PRECOMPILED_HEADERS ON)
 # I have so much faith
-set(GEODE_CODEDGEN_EXTRA_ARGS "--skip-pugixml")
+set(GEODE_CODEGEN_EXTRA_ARGS "--skip-pugixml")
 
 option(BLAZE_USE_TRACY "Use tracy" OFF)
 option(BLAZE_DEBUG "Debug mode" OFF)
