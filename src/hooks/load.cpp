@@ -704,6 +704,7 @@ void blaze::startPreInit() {
 
     // set appropriate texture quality
     auto tq = gm->m_texQuality;
+    log::debug("Setting content scale to {}", (int)tq);
     CCDirector::get()->updateContentScale((TextureQuality)tq);
     CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
 
