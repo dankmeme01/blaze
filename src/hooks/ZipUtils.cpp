@@ -90,7 +90,7 @@ class $modify(ZipUtils) {
         if (!encrypted) {
             rawData = blaze::base64::decode(input, true);
         } else {
-            auto decrypted = encryptDecrypt(input, key);
+            auto decrypted = encryptDecryptImpl(input, key);
             rawData = blaze::base64::decode(decrypted, true);
         }
 

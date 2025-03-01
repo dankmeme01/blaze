@@ -3,8 +3,7 @@ name: Build Geode Mod
 on:
   workflow_dispatch:
   push:
-    branches:
-      - "**"
+  pull_request:
 
 jobs:
   build:
@@ -36,8 +35,7 @@ jobs:
         uses: geode-sdk/build-geode-mod@main
         with:
           sdk: nightly
-          bindings: geode-sdk/bindings
-          bindings-ref: main
+          configure-args: '-DBLAZE_RELEASE=ON'
           combine: true
           target: ${{ matrix.config.target }}
 
