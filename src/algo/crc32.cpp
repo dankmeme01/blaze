@@ -5,6 +5,7 @@
 # include <crc32intrin.h>
 #elif defined(ASP_IS_ARM64)
 # include <arm_neon.h>
+# include <arm_acle.h>
 # ifdef ASP_IS_MACOS
 #  define ASP_ASSUME_HAS_CRC32 // we assume that all arm64 macs have crc32
 # else
@@ -13,6 +14,7 @@
 #endif
 
 #include <tracing.hpp>
+#include <Geode/loader/Log.hpp>
 
 // Note: the crc32 algorithms in this file may produce different results (due to different polynomials),
 // that's OK. we only need them to be consistent on the same device.
@@ -39,32 +41,36 @@ namespace blaze {
         return ~crc;
     }
 #elif defined (ASP_IS_ARM64)
-# define CRC32CX(crc, value) __asm__("crc32cx %w[c], %w[c], %x[v]":[c]"+r"(crc):[v]"r"(value))
-# define CRC32CW(crc, value) __asm__("crc32cw %w[c], %w[c], %w[v]":[c]"+r"(crc):[v]"r"(value))
-# define CRC32CH(crc, value) __asm__("crc32ch %w[c], %w[c], %w[v]":[c]"+r"(crc):[v]"r"(value))
-# define CRC32CB(crc, value) __asm__("crc32cb %w[c], %w[c], %w[v]":[c]"+r"(crc):[v]"r"(value))
 
 	// arm NEON optimized algorithm utilizing crc32 instructions
     static uint32_t crc32hw(const uint8_t* bytes, size_t len, uint32_t initial) {
         uint32_t crc = ~initial;
-        while ((len -= sizeof(uint64_t)) >= 0) {
-            CRC32CX(crc, *(uint64_t*)bytes);
+		const uint8_t* end = bytes + len;
+
+        while (bytes + sizeof(uint64_t) <= end) {
+			uint64_t val;
+			std::memcpy(&val, bytes, sizeof(uint64_t));
+			crc = __crc32cd(crc, val);
             bytes += sizeof(uint64_t);
         }
 
-        if (len & sizeof(uint32_t)) {
-            CRC32CW(crc, *(uint32_t*)bytes);
+        if (bytes + sizeof(uint32_t) <= end) {
+			uint32_t val;
+			std::memcpy(&val, bytes, sizeof(uint32_t));
+			crc = __crc32cw(crc, val);
             bytes += sizeof(uint32_t);
         }
 
-        if (len & sizeof(uint16_t)) {
-            CRC32CH(crc, *(uint16_t*)bytes);
+        if (bytes + sizeof(uint16_t) <= end) {
+			uint16_t val;
+			std::memcpy(&val, bytes, sizeof(uint16_t));
+			crc = __crc32ch(crc, val);
             bytes += sizeof(uint16_t);
         }
 
-        if (len & sizeof(uint8_t)) {
-            CRC32CB(crc, *bytes);
-        }
+        if (bytes < end) {
+			crc = __crc32b(crc, *bytes);
+		}
 
         return ~crc;
     }

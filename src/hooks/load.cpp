@@ -6,7 +6,12 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LoadingLayer.hpp>
-#include <Geode/modify/CCApplication.hpp>
+
+#ifdef GEODE_IS_WINDOWS
+# include <Geode/modify/CCApplication.hpp>
+#elif defined(GEODE_IS_ANDROID)
+# include <Geode/modify/AppDelegate.hpp>
+#endif
 
 #include <asp/sync/Mutex.hpp>
 #include <asp/thread/ThreadPool.hpp>
@@ -786,7 +791,7 @@ void blaze::startPreInit() {
     BLAZE_TIMER_END();
 }
 
-#ifndef GEODE_IS_MACOS
+#ifdef GEODE_IS_WINDOWS
 class $modify(CCApplication) {
     int run() {
         blaze::startPreInit();
@@ -795,4 +800,14 @@ class $modify(CCApplication) {
         return CCApplication::run();
     }
 };
+#elif defined(GEODE_IS_ANDROID)
+class $modify(AppDelegate) {
+    bool applicationDidFinishLaunching() {
+        blaze::startPreInit();
+
+        // finally go back to running the rest of the game
+        return AppDelegate::applicationDidFinishLaunching();
+    }
+};
 #endif
+// Macos entry is defined in load.mm
