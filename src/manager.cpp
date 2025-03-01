@@ -74,7 +74,7 @@ void LoadManager::queueForCache(const std::filesystem::path& path, std::vector<u
     converterQueue.push(std::make_pair(path, std::move(data)));
 }
 
-std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSize) {
+std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSize, bool absolutePath) {
     ZoneScoped;
 
 #ifdef GEODE_IS_ANDROID
@@ -82,8 +82,14 @@ std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSi
     auto buf = CCFileUtils::get()->getFileData(path, "rb", &s);
     outSize = s;
 #else
-    // TODO: bring our faster fullPathForFilename reimpl here
-    auto fp = CCFileUtils::get()->fullPathForFilename(path, false);
+    gd::string fp;
+
+    if (absolutePath) {
+        fp = path;
+    } else {
+        // TODO: bring our faster fullPathForFilename reimpl here
+        fp = CCFileUtils::get()->fullPathForFilename(path, false);
+    }
 
     std::ifstream file(fp, std::ios::in | std::ios::binary);
     if (!file.is_open()) {

@@ -93,8 +93,6 @@ struct AsyncImageLoadRequest {
             return Err(fmt::format("Failed to find path for image {}", pngFile));
         }
 
-        log::debug("loadImage {}", pathKey);
-
         this->imageData = LoadManager::get().readFileToChunk(pathKey.c_str());
 
         if (!imageData || imageData.size == 0) {
@@ -703,8 +701,16 @@ void blaze::startPreInit() {
     BLAZE_TIMER_STEP("Preparation for asset preloading");
 
     // set appropriate texture quality
-    auto tq = gm->m_texQuality;
-    log::debug("Setting content scale to {}, aka {}, exp offset {}", (int)tq, *(int*)((char*)gm + 1000), offsetof(GameManager, m_texQuality));
+
+#ifdef GEODE_IS_ANDROID
+    int tq = gm->m_texQuality = 2; // it seems like android is hardcoded to be 'auto', which for us means medium
+#else
+    int tq = gm->m_texQuality;
+    if (tq == 0) {
+        tq = gm->m_texQuality = 3; // use high if auto is selected
+    }
+#endif
+
     CCDirector::get()->updateContentScale((TextureQuality)tq);
     CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
 
