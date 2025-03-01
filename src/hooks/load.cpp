@@ -161,54 +161,17 @@ struct AsyncImageLoadRequest {
 
         ZoneScoped;
 
-        // try to guess the full plist name without calling fullPathForFilename
-        auto pfsv = std::string_view(plistFile);
-
-        // strip .plist extension
-        std::string plistPath;
-
-        plistPath.reserve(pfsv.size() - sizeof(".plist") + sizeof("-uhd.plist"));
-        plistPath.append(pfsv.substr(0, pfsv.size() - sizeof(".plist")));
-
-        switch (texQuality) {
-            case cocos2d::kTextureQualityLow:
-                plistPath.append(std::string_view(".plist")); break;
-            case cocos2d::kTextureQualityMedium:
-                // @geode-ignore(unknown-resource)
-                plistPath.append(std::string_view("-hd.plist")); break;
-            case cocos2d::kTextureQualityHigh:
-                // @geode-ignore(unknown-resource)
-                plistPath.append(std::string_view("-uhd.plist")); break;
-        }
-
-        log::debug("loading plist {}", plistPath);
-
         {
             ZoneScopedN("addSpriteFrames loading plist");
 
-            auto fu = CCFileUtils::get();
-            unsigned long size = 0;
-            unsigned char* dataptr = fu->getFileData(plistPath.c_str(), "rt", &size);
+            size_t size = 0;
+            auto dataptr = LoadManager::get().readFile(plistFile.c_str(), size);
 
             if (!dataptr || size == 0) {
-                delete[] dataptr;
-                dataptr = nullptr;
-
-                // Try another path
-                plistPath = CCFileUtils::get()->fullPathForFilename(plistFile, false);
-                dataptr = fu->getFileData(plistPath.c_str(), "rt", &size);
-
-                log::debug("failed to load, loading another plist: {}", plistPath);
-
-                if (!dataptr || size == 0) {
-                    delete[] dataptr;
-                    dataptr = nullptr;
-
-                    log::warn("failed to find the plist for {}", plistFile);
-                    auto _mtx = texCacheMutex.lock();
-                    CCTextureCache::get()->m_pTextures->removeObjectForKey(pathKey);
-                    return;
-                }
+                log::warn("failed to find the plist for {}", plistFile);
+                auto _mtx = texCacheMutex.lock();
+                CCTextureCache::get()->m_pTextures->removeObjectForKey(pathKey);
+                return;
             }
 
             std::unique_ptr<blaze::SpriteFrameData> spf;

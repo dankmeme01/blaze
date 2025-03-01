@@ -82,7 +82,10 @@ std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSi
     auto buf = CCFileUtils::get()->getFileData(path, "rb", &s);
     outSize = s;
 #else
-    std::ifstream file(path, std::ios::in | std::ios::binary);
+    // TODO: bring our faster fullPathForFilename reimpl here
+    auto fp = CCFileUtils::get()->fullPathForFilename(path, false);
+
+    std::ifstream file(fp, std::ios::in | std::ios::binary);
     if (!file.is_open()) {
         outSize = 0;
         return nullptr;
