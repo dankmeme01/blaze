@@ -1,4 +1,7 @@
 #include <Geode/Geode.hpp>
+
+#ifndef GEODE_IS_MACOS // icbb
+
 #include <Geode/modify/ZipUtils.hpp>
 #include <Geode/cocos/support/base64.h>
 
@@ -6,6 +9,7 @@
 #include <util.hpp>
 
 using namespace geode::prelude;
+
 
 static int base64DecodeHook(unsigned char* in, unsigned int inLength, unsigned char **out) {
     size_t outLen = blaze::base64::decodedLen(reinterpret_cast<char*>(in), inLength);
@@ -60,3 +64,4 @@ $execute {
     // std::exit(0);
 }
 
+#endif
