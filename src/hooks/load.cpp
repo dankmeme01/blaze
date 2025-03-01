@@ -165,7 +165,7 @@ struct AsyncImageLoadRequest {
             ZoneScopedN("addSpriteFrames loading plist");
 
             size_t size = 0;
-            auto dataptr = LoadManager::get().readFile(plistFile.c_str(), size);
+            auto dataptr = LoadManager::get().readFile(plistFile, size);
 
             if (!dataptr || size == 0) {
                 log::warn("failed to find the plist for {}", plistFile);
@@ -177,7 +177,7 @@ struct AsyncImageLoadRequest {
             std::unique_ptr<blaze::SpriteFrameData> spf;
             {
                 ZoneScopedN("addSpriteFrames parsing sprite frames");
-                auto res = blaze::parseSpriteFrames(dataptr, size);
+                auto res = blaze::parseSpriteFrames(dataptr.get(), size);
 
                 if (res) {
                     spf = std::move(res).unwrap();
@@ -193,8 +193,6 @@ struct AsyncImageLoadRequest {
 
                 blaze::addSpriteFrames(*spf, texture);
             }
-
-            delete[] dataptr;
         }
     }
 };
