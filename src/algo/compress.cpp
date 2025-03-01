@@ -78,6 +78,31 @@ namespace blaze {
         this->mode = mode;
     }
 
+    void Decompressor::setModeAuto(const void* input, size_t size) {
+        if (size < 2) {
+            return; // too small to determine
+        }
+
+        const uint8_t* data = (const uint8_t*)input;
+        if (data[0] == 0x1f && data[1] == 0x8b) {
+            this->setMode(CompressionMode::Gzip);
+        } else if (data[0] == 0x78 && (data[1] == 0x01 || data[1] == 0x9c || data[1] == 0xda || data[1] == 0x5e)) {
+            this->setMode(CompressionMode::Zlib);
+        } else {
+            log::warn("Failed to determine compression mode, using default.");
+
+            if (size >= 6) {
+                log::warn("First few bytes of the header: {:X} {:X} {:X} {:X} {:X} {:X}", data[0], data[1], data[2], data[3], data[4], data[5]);
+            }
+
+            this->setMode(DEFAULT_DECOMPRESSION);
+        }
+    }
+
+    CompressionMode Decompressor::getMode() const {
+        return mode;
+    }
+
     Result<size_t, int> Decompressor::decompress(const void* input, size_t size, void* out, size_t outSize, size_t& writtenSize) {
         libdeflate_result res;
 

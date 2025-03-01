@@ -40,7 +40,12 @@ namespace blaze {
     public:
         Decompressor();
         ~Decompressor();
+
         void setMode(CompressionMode mode);
+
+        // Reads the buffer, attempts to pick the correct decompression mode
+        void setModeAuto(const void* input, size_t size);
+        CompressionMode getMode() const;
 
         geode::Result<size_t, int> decompress(const void* input, size_t size, void* out, size_t outSize, size_t& writtenSize);
         geode::Result<OwnedMemoryChunk> decompressToChunk(const void* input, size_t size);

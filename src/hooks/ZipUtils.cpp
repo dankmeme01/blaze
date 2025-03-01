@@ -86,12 +86,18 @@ class $modify(ZipUtils) {
             return "";
         }
 
+        BLAZE_TIMER_START("decompressString (base64)");
+
         std::vector<uint8_t> rawData;
         if (!encrypted) {
             rawData = blaze::base64::decode(input, true);
         } else {
-            encryptDecryptImpl((char*) input.data(), input.size(), key);
-            rawData = blaze::base64::decode(input.data(), input.size(), true);
+            // make a copy buffer to decrypt in-place
+            char* buf = new char[input.size()];
+            std::memcpy(buf, input.data(), input.size());
+            encryptDecryptImpl(buf, input.size(), key);
+            rawData = blaze::base64::decode(buf, input.size(), true);
+            delete[] buf;
         }
 
         if (rawData.empty()) {
@@ -100,15 +106,19 @@ class $modify(ZipUtils) {
             return ZipUtils::decompressString(input, encrypted, key);
         }
 
+        BLAZE_TIMER_STEP("Decompress");
+
         blaze::Decompressor decompressor;
+        decompressor.setModeAuto(rawData.data(), rawData.size());
+
         auto result = decompressor.decompressToString(rawData.data(), rawData.size());
 
         if (result.isOk()) {
             // success!
 #ifdef GEODE_IS_ANDROID
-            return gd::string(std::move(result.unwrap()));
+            return gd::string(std::move(result).unwrap());
 #else
-            return std::move(result.unwrap());
+            return std::move(result).unwrap();
 #endif
         }
 
@@ -147,6 +157,7 @@ class $modify(ZipUtils) {
         BLAZE_TIMER_STEP("Decompress");
 
         blaze::Decompressor decompressor;
+        decompressor.setModeAuto(rawData.data(), rawData.size());
 
         auto result = decompressor.decompressToString(rawData.data(), rawData.size());
 
