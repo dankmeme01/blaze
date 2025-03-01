@@ -16,7 +16,7 @@ void appControllerHook(void* self, SEL sel, NSNotification* notif) {
 }
 
 $execute {
-#if GEODE_GD_COMP_VERSION != 22074
+#if GEODE_COMP_GD_VERSION != 22074
 # error "This hook is not compatible with this version of GD"
 #endif
 
