@@ -93,6 +93,8 @@ struct AsyncImageLoadRequest {
             return Err(fmt::format("Failed to find path for image {}", pngFile));
         }
 
+        log::debug("loadImage {}", pathKey);
+
         this->imageData = LoadManager::get().readFileToChunk(pathKey.c_str());
 
         if (!imageData || imageData.size == 0) {
@@ -179,6 +181,8 @@ struct AsyncImageLoadRequest {
                 plistPath.append(std::string_view("-uhd.plist")); break;
         }
 
+        log::debug("loading plist {}", plistPath);
+
         {
             ZoneScopedN("addSpriteFrames loading plist");
 
@@ -193,6 +197,8 @@ struct AsyncImageLoadRequest {
                 // Try another path
                 plistPath = CCFileUtils::get()->fullPathForFilename(plistFile, false);
                 dataptr = fu->getFileData(plistPath.c_str(), "rt", &size);
+
+                log::debug("failed to load, loading another plist: {}", plistPath);
 
                 if (!dataptr || size == 0) {
                     delete[] dataptr;

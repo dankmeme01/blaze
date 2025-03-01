@@ -77,10 +77,26 @@ void LoadManager::queueForCache(const std::filesystem::path& path, std::vector<u
 std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSize) {
     ZoneScoped;
 
+#ifdef GEODE_IS_ANDROID
     unsigned long s;
-
     auto buf = CCFileUtils::get()->getFileData(path, "rb", &s);
     outSize = s;
+#else
+    std::ifstream file(path, std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+        outSize = 0;
+        return nullptr;
+    }
+
+    // get the file size
+    file.seekg(0, std::ios::end);
+    outSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    auto buf = new uint8_t[outSize];
+    file.read(reinterpret_cast<char*>(buf), outSize);
+    file.close();
+#endif
 
     return std::unique_ptr<uint8_t[]>(buf);
 }
