@@ -16,7 +16,17 @@ void appControllerHook(void* self, SEL sel, NSNotification* notif) {
 }
 
 $execute {
-    s_applicationDidFinishLaunchingOrig = reinterpret_cast<decltype(s_applicationDidFinishLaunchingOrig)>(geode::base::get() + 0x98cc);
+#if GEODE_GD_COMP_VERSION != 22074
+# error "This hook is not compatible with this version of GD"
+#endif
+
+    s_applicationDidFinishLaunchingOrig = reinterpret_cast<decltype(s_applicationDidFinishLaunchingOrig)>(geode::base::get() +
+#ifdef GEODE_IS_ARM_MAC
+        0x98cc
+#else
+        0x7af0
+#endif
+);
 
     (void) geode::Mod::get()->hook(
         reinterpret_cast<void*>(s_applicationDidFinishLaunchingOrig),
