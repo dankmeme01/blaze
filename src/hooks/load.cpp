@@ -18,15 +18,19 @@
 #include <asp/thread/Thread.hpp>
 #include <asp/time/Instant.hpp>
 #include <asp/time/Duration.hpp>
+#include <asp/fs/fs.hpp>
 
-#include <hooks/FMODAudioEngine.hpp>
 #include <TaskTimer.hpp>
 #include <manager.hpp>
 #include <ccimageext.hpp>
 #include <settings.hpp>
 #include <tracing.hpp>
 #include <util/hash.hpp>
+#include <util/thread.hpp>
 
+#include "FMODAudioEngine.hpp"
+#include "CCTextureCache.hpp"
+#include "CCSpriteFrameCache.hpp"
 #include "load/glfw.hpp"
 #include "load/spriteframes.hpp"
 
@@ -35,7 +39,6 @@ using namespace geode::prelude;
 using namespace asp::time;
 
 // mutexes for thread unsafe classes
-static asp::Mutex<> texCacheMutex, sfcacheMutex;
 static GameManager* gm;
 
 // AsyncImageLoadRequest - structure that handles the loading of a specific texture
@@ -131,6 +134,8 @@ struct AsyncImageLoadRequest {
     inline Result<> initTexture() {
         ZoneScoped;
 
+        BLAZE_ASSERT_MAIN_THREAD;
+
         if (!image) return Err("attempting to initialize a texture before initializing an image");
 
         this->texture = new CCTexture2D();
@@ -142,8 +147,7 @@ struct AsyncImageLoadRequest {
             return Err("failed to initialize cctexture2d");;
         }
 
-        auto _lck = texCacheMutex.lock();
-        CCTextureCache::get()->m_pTextures->setObject(texture, pathKey);
+        blaze::BTextureCache::get().setTexture(pathKey, texture);
 
         return Ok();
     }
@@ -152,10 +156,11 @@ struct AsyncImageLoadRequest {
         return this->texture != nullptr;
     }
 
-    // Async version of addSpriteFramesSync
-    inline void addSpriteFrames(TextureQuality texQuality) const {
-        if (!plistFile) return;
-        if (!texture) return;
+    // Initializes sprite frames for this spritesheet. Can be safely called on any thread.
+    // Is supposed to an entire reimplementation `CCSpriteFrameCache::addSpriteFramesWithFile`.
+    inline void addSpriteFrames() const {
+        BLAZE_ASSERT(plistFile != nullptr);
+        BLAZE_ASSERT(texture != nullptr);
 
         ZoneScoped;
 
@@ -167,8 +172,7 @@ struct AsyncImageLoadRequest {
 
             if (!dataptr || size == 0) {
                 log::warn("failed to find the plist for {}", plistFile);
-                auto _mtx = texCacheMutex.lock();
-                CCTextureCache::get()->m_pTextures->removeObjectForKey(pathKey);
+                blaze::BTextureCache::get().removeTexture(pathKey);
                 return;
             }
 
@@ -187,7 +191,29 @@ struct AsyncImageLoadRequest {
             if (spf) {
                 ZoneScopedN("addSpriteFrames adding frames to cache")
 
-                auto _lck = sfcacheMutex.lock();
+                // We don't do this check in release, but it's important that the texture file name parsed from the .plist
+                // is equal to the actual .png file that we loaded earlier.
+#ifdef BLAZE_DEBUG
+                std::filesystem::path imgpath;
+
+                if (spf->metadata.textureFileName && strlen(spf->metadata.textureFileName)) {
+                    auto cstr = CCFileUtils::get()->fullPathFromRelativeFile(spf->metadata.textureFileName, plistFile);
+                    imgpath = CCFileUtils::get()->fullPathForFilename(cstr, true);
+                } else {
+                    // build texture path by replacing file extension
+                    imgpath = CCFileUtils::get()->fullPathForFilename(plistFile, true);
+                    imgpath.replace_extension(".png");
+                }
+
+                std::filesystem::path loadedPath = pathKey;
+
+                if (!asp::fs::equivalent(imgpath, loadedPath).unwrapOr(false)) {
+                    log::warn("texture file name mismatch: plist expected {} but we loaded {}", imgpath, loadedPath);
+                    BLAZE_ASSERT(false);
+                }
+#endif
+
+                auto _lck = blaze::g_sfcacheMutex.lock();
 
                 blaze::addSpriteFrames(*spf, texture);
             }
@@ -402,7 +428,9 @@ class $modify(MyLoadingLayer, LoadingLayer) {
                 continue;
             }
 
-            iTask.addSpriteFrames((TextureQuality) gm->m_texQuality);
+            if (iTask.plistFile) {
+                iTask.addSpriteFrames();
+            }
         }
 
         BLAZE_TIMER_STEP("LoadingLayer UI");
@@ -498,7 +526,7 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
             if (iTask->plistFile) {
                 s_loadThreadPool->pushTask([iTask] {
-                    iTask->addSpriteFrames((TextureQuality) gm->m_texQuality);
+                    iTask->addSpriteFrames();
                 });
             }
         }
@@ -649,6 +677,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 
 void blaze::startPreInit() {
     g_ccApplicationRunTime = Instant::now();
+
+    blaze::setMainThreadId();
 
     // Check if our compile-time crc32 algorithm works correctly (should never fail, but we'll keep as a sanity check)
     if (blaze::hashStringRuntime("hai uwu") != BLAZE_STRING_HASH("hai uwu")) {

@@ -110,7 +110,7 @@ Result<> CCImageExt::initWithSPNGOrCache(const uint8_t* buffer, size_t size, con
     std::error_code ec;
     std::filesystem::remove(cachedFile, ec);
 
-    LoadManager::get().queueForCache(p, {});
+    // LoadManager::get().queueForCache(p, {});
 
     return this->initWithSPNG(buffer, size);
 }

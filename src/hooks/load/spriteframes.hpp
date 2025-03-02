@@ -33,7 +33,7 @@ struct SpriteFrameData {
 };
 
 // Parses data from a .plist file into a structure holding many sprite frames.
-geode::Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t size);
+geode::Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t size, bool ownBuffer = false);
 
 // Adds sprite frames to `CCSpriteFrameCache` from a parsed `SpriteFrameData`.
 void addSpriteFrames(const SpriteFrameData& frames, cocos2d::CCTexture2D* texture);

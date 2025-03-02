@@ -306,10 +306,17 @@ bool parseSpriteFrame(pugi::xml_node node, SpriteFrame& sframe, int format) {
     }
 }
 
-Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t size) {
+Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t size, bool ownBuffer) {
     auto sfdata = std::make_unique<SpriteFrameData>();
 
-    auto result = sfdata->doc.load_buffer_inplace(data, size);
+    pugi::xml_parse_result result;
+
+    if (ownBuffer) {
+        result = sfdata->doc.load_buffer_inplace_own(data, size);
+    } else {
+        result = sfdata->doc.load_buffer_inplace(data, size);
+    }
+
     if (!result) {
         return Err("Failed to parse XML: {}", result.description());
     }
@@ -362,16 +369,16 @@ Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t si
             continue;
         }
 
-        if (strcmp(keyName, "format") == 0) {
-            sfdata->metadata.format = parseNode<int>(valueNode).value_or(-1);
+        auto keyHash = blaze::hashStringRuntime(keyName);
 
-#ifndef BLAZE_DEBUG
-            break; // we only need the format version, break early if not in debug mode
-#endif
-        }
+        switch (keyHash) {
+            case BLAZE_STRING_HASH("format"): {
+                sfdata->metadata.format = parseNode<int>(valueNode).value_or(-1);
+            } break;
 
-        if (strcmp(keyName, "realTextureFileName") == 0) {
-            sfdata->metadata.textureFileName = valueNode.child_value();
+            case BLAZE_STRING_HASH("textureFileName"): {
+                sfdata->metadata.textureFileName = valueNode.child_value();
+            } break;
         }
     }
 
@@ -445,6 +452,8 @@ void addSpriteFrames(const SpriteFrameData& frames, cocos2d::CCTexture2D* textur
 
         spriteFrame->release();
     }
+
+    sfcache->m_pLoadedFileNames->insert(frames.metadata.textureFileName);
 }
 
 void addSpriteFramesVanilla(cocos2d::CCDictionary* dict, cocos2d::CCTexture2D* texture) {
