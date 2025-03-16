@@ -358,7 +358,7 @@ Result<std::unique_ptr<SpriteFrameData>> parseSpriteFrames(void* data, size_t si
         return Err("Failed to find 'metadata' node");
     }
 
-    // Iterate over the metadata, although we only need the format version
+    // Iterate over the metadata
     for (pugi::xml_node keyNode = metadata.child("key"); keyNode; keyNode = keyNode.next_sibling("key")) {
         auto keyName = keyNode.child_value();
 
@@ -430,6 +430,7 @@ void addSpriteFrames(const SpriteFrameData& frames, cocos2d::CCTexture2D* textur
         );
 
         if (!result) {
+            spriteFrame->release();
             log::warn("Failed to initialize sprite frame for {}", frame.name);
             continue;
         }
