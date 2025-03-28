@@ -10,6 +10,8 @@ namespace blaze {
         bool asyncFmod = false;
         bool fastSaving = false;
         bool uncompressedSaves = false;
+        bool lowMemory = false;
+        bool loadMore = false;
     };
 
     _settings& settings();

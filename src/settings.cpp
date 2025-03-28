@@ -18,6 +18,8 @@ namespace blaze {
             settings.asyncFmod = Mod::get()->getSettingValue<bool>("async-fmod");
             settings.fastSaving = Mod::get()->getSettingValue<bool>("fast-saving");
             settings.uncompressedSaves = Mod::get()->getSettingValue<bool>("uncompressed-saves");
+            settings.lowMemory = Mod::get()->getSettingValue<bool>("low-memory-mode");
+            settings.loadMore = Mod::get()->getSettingValue<bool>("load-more");
         }
 
         return settings;
@@ -31,4 +33,5 @@ $execute {
     s_listen("image-cache-small", imageCacheSmall);
     s_listen("fast-saving", fastSaving);
     s_listen("uncompressed-saves", uncompressedSaves);
+    s_listen("low-memory-mode", lowMemory);
 }

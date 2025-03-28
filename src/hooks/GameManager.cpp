@@ -4,6 +4,9 @@
 #include <Geode/modify/GameManager.hpp>
 #include <util.hpp>
 #include <TaskTimer.hpp>
+#include <settings.hpp>
+
+#include "CCTextureCache.hpp"
 
 using namespace geode::prelude;
 
@@ -12,6 +15,28 @@ using namespace geode::prelude;
 #else
 # define B_floorf std::floorf
 #endif
+
+class $modify(GameManager) {
+    static void onModify(auto& self) {
+        BLAZE_HOOK_VERY_LAST(GameManager::loadBackground);
+    }
+
+    void loadBackground(int id) {
+        char buf[128];
+        size_t sz = fmt::format_to_n(buf, 128, "game_bg_{:02}_001.png", id).size;
+        buf[sz] = '\0';
+
+        m_loadedBgID = 0;
+
+        blaze::BTextureCache::get().loadTexture(buf);
+    }
+
+    // void unloadBackground() {
+    //     if (blaze::settings().lowMemory) {
+    //         return GameManager::unloadBackground();
+    //     }
+    // }
+};
 
 // class $modify(GameManager) {
 //     static void onModify(auto& self) {
