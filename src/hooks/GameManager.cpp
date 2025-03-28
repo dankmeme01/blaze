@@ -26,7 +26,7 @@ class $modify(GameManager) {
         size_t sz = fmt::format_to_n(buf, 128, "game_bg_{:02}_001.png", id).size;
         buf[sz] = '\0';
 
-        m_loadedBgID = 0;
+        m_loadedBgID = id;
 
         blaze::BTextureCache::get().loadTexture(buf);
     }
