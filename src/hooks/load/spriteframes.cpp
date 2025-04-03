@@ -151,7 +151,7 @@ std::optional<T> parseNode(pugi::xml_node node) {
     if (auto _res = (val)) { \
         var = std::move(_res).value(); \
     } else { \
-        log::debug("Failed to parse {} ({}:{})", #var, __FILE__, __LINE__); \
+        log::warn("Failed to parse {} ({}:{})", #var, __FILE__, __LINE__); \
         return false; \
     } \
 
