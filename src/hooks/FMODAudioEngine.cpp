@@ -118,9 +118,9 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
     m_mainDSP->setMeteringEnabled(false, true);
 
     m_system->createChannelGroup(nullptr, &m_globalChannel);
-    m_system->createChannelGroup(nullptr, &m_channelGroup2);
+    m_system->createChannelGroup(nullptr, &m_reverbChannel);
 
-    m_globalChannel->addGroup(m_channelGroup2, true, nullptr);
+    m_globalChannel->addGroup(m_reverbChannel, true, nullptr);
 
     FMOD::DSP* dsp = nullptr;
     m_system->createDSPByType(FMOD_DSP_TYPE_LIMITER, &dsp);
@@ -137,7 +137,7 @@ void HookedFMODAudioEngine::setupAudioEngineReimpl(bool gv0159, bool reducedQual
 
     dsp = nullptr;
     m_system->createDSPByType(FMOD_DSP_TYPE_SFXREVERB, &dsp);
-    m_channelGroup2->addDSP(0, dsp);
+    m_reverbChannel->addDSP(0, dsp);
 
     this->updateReverb(m_reverbPreset, true);
 
