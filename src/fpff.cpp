@@ -84,6 +84,20 @@ gd::string fullPathForFilename(std::string_view input, bool ignoreSuffix) {
         return {};
     }
 
+    // if the input is an absolute path, return it as is
+    // we try to make this check as cheap as possible, so don't rely on std::filesystem or cocos
+#ifdef GEODE_IS_WINDOWS
+    if (input.size() >= 3 && std::isalpha(input[0]) && input[1] == ':' && (input[2] == '/' || input[2] == '\\')) {
+        return gd::string{input};
+    } else if (input.size() >= 2 && input[0] == '\\' && input[1] == '\\') {
+        return gd::string{input};
+    }
+#else
+    if (input.size() >= 1 && input[0] == '/') {
+        return gd::string{input.data(), input.size()};
+    }
+#endif
+
     // add the quality suffix if needed
     std::string filename;
 
@@ -108,20 +122,6 @@ gd::string fullPathForFilename(std::string_view input, bool ignoreSuffix) {
         filename = input;
     }
 
-    // if the input is an absolute path, return it as is
-    // we try to make this check as cheap as possible, so don't rely on std::filesystem or cocos
-#ifdef GEODE_IS_WINDOWS
-    if (filename.size() >= 3 && std::isalpha(filename[0]) && filename[1] == ':' && (filename[2] == '/' || filename[2] == '\\')) {
-        return filename;
-    } else if (filename.size() >= 2 && filename[0] == '\\' && filename[1] == '\\') {
-        return filename;
-    }
-#else
-    if (filename.size() >= 1 && filename[0] == '/') {
-        return filename;
-    }
-#endif
-
     // TODO: we disregard CCFileUtils m_pFilenameLookupDict / getNewFilename() here
 
     std::string fullpath;
@@ -139,9 +139,14 @@ gd::string fullPathForFilename(std::string_view input, bool ignoreSuffix) {
         TRY_PATH(sp);
     }
 
-    // if all else fails, accept defeat
-    log::warn("PreloadManager: could not find full path for '{}' (transformed: '{}')", input, filename);
-    return filename;
+    if (ignoreSuffix) {
+        // if all else fails, accept defeat
+        log::warn("blaze: could not find full path for '{}' (transformed: '{}')", input, filename);
+        return filename;
+    } else {
+        // try to find the file without the quality suffix
+        return fullPathForFilename(input, true);
+    }
 }
 
 }

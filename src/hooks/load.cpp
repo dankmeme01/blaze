@@ -94,13 +94,13 @@ struct AsyncImageLoadRequest {
 
         this->pathKey = blaze::fullPathForFilename(pngFile, false);
         if (pathKey.empty()) {
-            return Err(fmt::format("Failed to find path for image {}", pngFile));
+            return Err(fmt::format("Failed to find path for image '{}'", pngFile));
         }
 
-        this->imageData = LoadManager::get().readFileToChunk(pathKey.c_str());
+        this->imageData = LoadManager::get().readFileToChunk(pathKey.c_str(), true);
 
         if (!imageData || imageData.size == 0) {
-            return Err(fmt::format("Failed to open image file at {}", pathKey));
+            return Err(fmt::format("Failed to open image file at '{}'", pathKey));
         }
 
         return Ok();

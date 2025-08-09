@@ -110,9 +110,9 @@ std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSi
     return std::unique_ptr<uint8_t[]>(buf);
 }
 
-blaze::OwnedMemoryChunk LoadManager::readFileToChunk(const char* path) {
+blaze::OwnedMemoryChunk LoadManager::readFileToChunk(const char* path, bool absolutePath) {
     size_t outSize;
-    auto ptr = this->readFile(path, outSize);
+    auto ptr = this->readFile(path, outSize, absolutePath);
 
     if (ptr) {
         return blaze::OwnedMemoryChunk{std::move(ptr), outSize};
