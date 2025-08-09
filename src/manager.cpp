@@ -3,6 +3,7 @@
 #include <algo/crc32.hpp>
 #include <formats.hpp>
 #include <tracing.hpp>
+#include <fpff.hpp>
 
 #include <Geode/loader/Log.hpp>
 #include <Geode/loader/Mod.hpp>
@@ -87,8 +88,7 @@ std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSi
     if (absolutePath) {
         fp = path;
     } else {
-        // TODO: bring our faster fullPathForFilename reimpl here
-        fp = CCFileUtils::get()->fullPathForFilename(path, false);
+        fp = blaze::fullPathForFilename(path);
     }
 
     std::ifstream file(fp, std::ios::in | std::ios::binary);

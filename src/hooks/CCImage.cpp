@@ -24,13 +24,13 @@ class $modify(CCImage) {
 
     static void onModify(auto& self) {
         // run last since we dont call the originals
-        (void) self.setHookPriority("cocos2d::CCImage::initWithImageFile", 9999999).unwrap();
-        (void) self.setHookPriority("cocos2d::CCImage::initWithImageFileThreadSafe", 9999999).unwrap();
+        (void) self.setHookPriority("cocos2d::CCImage::initWithImageFile", 9999999);
+        (void) self.setHookPriority("cocos2d::CCImage::initWithImageFileThreadSafe", 9999999);
 
 #ifdef GEODE_IS_MACOS // Mac does not have _initWithPngData
-        (void) self.setHookPriority("cocos2d::CCImage::initWithImageData", 9999999).unwrap();
+        (void) self.setHookPriority("cocos2d::CCImage::initWithImageData", 9999999);
 #else
-        (void) self.setHookPriority("cocos2d::CCImage::_initWithPngData", 9999999).unwrap();
+        (void) self.setHookPriority("cocos2d::CCImage::_initWithPngData", 9999999);
 #endif
     }
 

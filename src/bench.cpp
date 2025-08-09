@@ -3,6 +3,7 @@
 #include <TaskTimer.hpp>
 
 #include <hooks/load/spriteframes.hpp>
+#include <fpff.hpp>
 
 using namespace geode::prelude;
 
@@ -22,7 +23,7 @@ static void benchSpriteFrames() {
 
     BLAZE_TIMER_START("Parse sprite frames (custom)");
 
-    auto fp = CCFileUtils::get()->fullPathForFilename("PixelSheet_01.plist", false);
+    auto fp = blaze::fullPathForFilename("PixelSheet_01.plist", false);
     unsigned long size;
     auto data = CCFileUtils::get()->getFileData(fp.c_str(), "rt", &size);
 

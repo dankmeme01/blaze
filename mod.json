@@ -1,5 +1,5 @@
 {
-    "geode": "4.5.0",
+    "geode": "4.7.0",
     "gd": {
         "win": "2.2074",
         "android": "2.2074",
@@ -70,7 +70,7 @@
             "name": "Image cache",
             "type": "bool",
             "description": "After loading an image, cache it using a quicker format (FPNG), then in future load the cached version instead.",
-            "default": true
+            "default": false
         },
         "image-cache-small": {
             "name": "Smaller image cache",

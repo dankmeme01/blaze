@@ -27,6 +27,7 @@
 #include <tracing.hpp>
 #include <util/hash.hpp>
 #include <util/thread.hpp>
+#include <fpff.hpp>
 
 #include "FMODAudioEngine.hpp"
 #include "CCTextureCache.hpp"
@@ -91,7 +92,7 @@ struct AsyncImageLoadRequest {
 
         if (imageData) return Ok();
 
-        this->pathKey = CCFileUtils::get()->fullPathForFilename(pngFile, false);
+        this->pathKey = blaze::fullPathForFilename(pngFile, false);
         if (pathKey.empty()) {
             return Err(fmt::format("Failed to find path for image {}", pngFile));
         }
@@ -198,10 +199,10 @@ struct AsyncImageLoadRequest {
 
                 if (spf->metadata.textureFileName && strlen(spf->metadata.textureFileName)) {
                     auto cstr = CCFileUtils::get()->fullPathFromRelativeFile(spf->metadata.textureFileName, plistFile);
-                    imgpath = CCFileUtils::get()->fullPathForFilename(cstr, true);
+                    imgpath = blaze::fullPathForFilename(cstr, true);
                 } else {
                     // build texture path by replacing file extension
-                    imgpath = CCFileUtils::get()->fullPathForFilename(plistFile, true);
+                    imgpath = blaze::fullPathForFilename(plistFile, true);
                     imgpath.replace_extension(".png");
                 }
 

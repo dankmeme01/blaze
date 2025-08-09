@@ -8,6 +8,7 @@
 #include <cstring> // std::memcpy()
 #include <utility>
 #include <type_traits>
+#include <vector>
 
 // Helper functions
 
@@ -102,6 +103,37 @@ public:
     void resize_with_zero_init(size_type count);
 
     static constexpr size_type grow_factor = 2;
+
+    template <bool Const>
+    class FakeStdVector {
+        using RetT = std::conditional_t<Const, const std::vector<T>, std::vector<T>>;
+    public:
+        FakeStdVector(T* start, T* end, T* end_cap)
+            : start(start), end(end), end_cap(end_cap) {}
+
+        operator RetT& () {
+            return *reinterpret_cast<RetT*>(this);
+        }
+
+    private:
+        T* start;
+        T* end;
+        T* end_cap;
+
+        friend class fast_vector;
+    };
+
+    FakeStdVector<false> asStdVector() {
+        return FakeStdVector<false>(data(),
+                                    data() + size(),
+                                    data() + capacity());
+    }
+
+    FakeStdVector<true> asStdVector() const {
+        return FakeStdVector<true>(data(),
+                                    data() + size(),
+                                    data() + capacity());
+    }
 
 private:
     T* m_data = nullptr;

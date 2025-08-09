@@ -1,6 +1,7 @@
 #include <Geode/Geode.hpp>
 
 #include <fpng.h>
+#include "formats.hpp"
 #include <pugixml.hpp>
 
 using namespace geode::prelude;

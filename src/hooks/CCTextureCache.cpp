@@ -4,6 +4,7 @@
 #include <Geode/loader/Log.hpp>
 #include <ccimageext.hpp>
 #include <manager.hpp>
+#include <fpff.hpp>
 
 using namespace geode::prelude;
 
@@ -26,9 +27,7 @@ void BTextureCache::setTexture(const gd::string& key, CCTexture2D* texture) {
 }
 
 CCTexture2D* BTextureCache::loadTexture(const char* path) {
-    auto fu = CCFileUtils::get();
-
-    auto fullPath = fu->fullPathForFilename(path, false);
+    auto fullPath = blaze::fullPathForFilename(path, false);
     if (fullPath.empty()) {
         return nullptr;
     }

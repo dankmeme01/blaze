@@ -9,6 +9,7 @@
 #include <algo/crc32.hpp>
 #include <tracing.hpp>
 #include <settings.hpp>
+#include <fpff.hpp>
 
 #include <Geode/loader/Log.hpp>
 #include <Geode/Prelude.hpp>
@@ -82,7 +83,7 @@ Result<> CCImageExt::initWithSPNGOrCache(const uint8_t* buffer, size_t size, con
         // queue the image to be cached..
         std::vector<uint8_t> data(buffer, buffer + size);
 
-        LoadManager::get().queueForCache(std::filesystem::path(CCFileUtils::get()->fullPathForFilename(imgPath, false)), std::move(data));
+        LoadManager::get().queueForCache(std::filesystem::path(blaze::fullPathForFilename(imgPath)), std::move(data));
         return this->initWithSPNG(buffer, size);
     }
 
@@ -97,9 +98,9 @@ Result<> CCImageExt::initWithSPNGOrCache(const uint8_t* buffer, size_t size, con
 
     // god i hate gd::string
 #ifdef GEODE_IS_ANDROID
-    std::filesystem::path p{std::string(CCFileUtils::get()->fullPathForFilename(imgPath, false))};
+    std::filesystem::path p{std::string(blaze::fullPathForFilename(imgPath))};
 #else
-    std::filesystem::path p = CCFileUtils::get()->fullPathForFilename(imgPath, false);
+    std::filesystem::path p = blaze::fullPathForFilename(imgPath);
 #endif
 
     auto cachedFile = LoadManager::get().cacheFileForChecksum(checksum);
