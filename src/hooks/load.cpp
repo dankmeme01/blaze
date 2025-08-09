@@ -805,7 +805,7 @@ void blaze::startPreInit() {
     }
 #endif
 
-    CCDirector::get()->updateContentScale((TextureQuality)tq);
+    CCDirector::get()->updateContentScale((::TextureQuality)tq);
     CCTexture2D::setDefaultAlphaPixelFormat(cocos2d::kCCTexture2DPixelFormat_Default);
 
     // Init threadpool
