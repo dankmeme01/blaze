@@ -16,7 +16,7 @@ option(BLAZE_DEBUG "Debug mode" OFF)
 option(BLAZE_RELEASE "Release build" OFF)
 
 # source files
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 	src/*.cpp
     external/*.c
     external/*.cpp
@@ -51,7 +51,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE src/)
 # make spng use miniz instead of zlib
 target_compile_definitions(${PROJECT_NAME} PRIVATE SPNG_USE_MINIZ=1 SPNG_STATIC=1)
 
-CPMAddPackage("gh:dankmeme01/asp2#82babf7f")
+CPMAddPackage("gh:dankmeme01/asp2#d8529fa")
 CPMAddPackage("gh:simdutf/simdutf#83c0e74")
 CPMAddPackage(
     NAME libdeflate
