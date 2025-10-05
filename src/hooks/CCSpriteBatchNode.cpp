@@ -40,12 +40,11 @@ class $modify(CCSpriteBatchNode) {
         }
 
         kmGLPopMatrix();
-        this->setOrderOfArrival(0);
 
-        auto p4 = Instant::now();
-        auto elapsed = time.elapsed();
-        g_accumulatedVisitTime += elapsed;
-        g_accumulatedDrawTime += p3.durationSince(p2);
+        // auto p4 = Instant::now();
+        // auto elapsed = time.elapsed();
+        // g_accumulatedVisitTime += elapsed;
+        // g_accumulatedDrawTime += p3.durationSince(p2);
 
         // if (elapsed.micros() > 50) {
         //     log::debug(
