@@ -655,7 +655,8 @@ class $modify(MyLoadingLayer, LoadingLayer) {
 #endif
 
         m_fields->finishedLoading = true;
-        this->loadAssets();
+        m_loadStep = 14;
+        LoadingLayer::loadAssets();
     }
 
     // Boring stuff

@@ -61,11 +61,10 @@ class $modify(CCSpriteBatchNode) {
         if (m_pobTextureAtlas->getTotalQuads() == 0) return;
 
         auto now = Instant::now();
-
         // expansion of CC_NODE_DRAW_SETUP
         ccGLEnable(m_eGLServerState);
-        m_pShaderProgram->use();
-        m_pShaderProgram->setUniformsForBuiltins();
+        getShaderProgram()->use();
+        getShaderProgram()->setUniformsForBuiltins();
         // end expansion
 
         auto p1 = Instant::now();
