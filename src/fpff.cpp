@@ -40,6 +40,13 @@ struct HookedFileUtils : public Modify<HookedFileUtils, CCFileUtils> {
         auto guard = g_lock.lock();
         g_cache.clear();
     }
+
+    $override
+    static void purgeFileUtils() {
+        CCFileUtils::purgeFileUtils();
+        auto guard = g_lock.lock();
+        g_cache.clear();
+    }
 };
 
 static TextureQuality getTextureQuality() {
