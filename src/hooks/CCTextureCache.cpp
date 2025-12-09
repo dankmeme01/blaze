@@ -2,6 +2,7 @@
 
 #include <asp/sync/Mutex.hpp>
 #include <Geode/loader/Log.hpp>
+#include <Geode/modify/CCTextureCache.hpp>
 #include <ccimageext.hpp>
 #include <manager.hpp>
 #include <fpff.hpp>
@@ -26,10 +27,24 @@ void BTextureCache::setTexture(const gd::string& key, CCTexture2D* texture) {
     this->m_pTextures->setObject(texture, key);
 }
 
-CCTexture2D* BTextureCache::loadTexture(const char* path) {
+static bool equalIgnoreCase(std::string_view a, std::string_view b) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (tolower(a[i]) != tolower(b[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+CCTexture2D* BTextureCache::loadTexture(const char* path, bool ignoreSuffix) {
     blaze::ThreadSafeFileUtilsGuard _guard;
 
-    auto fullPath = blaze::fullPathForFilename(path, false);
+    auto fullPath = blaze::fullPathForFilename(path, ignoreSuffix);
     if (fullPath.empty()) {
         return nullptr;
     }
@@ -44,31 +59,31 @@ CCTexture2D* BTextureCache::loadTexture(const char* path) {
     }
 
     std::string_view extensionPre = fullPathsv.substr(fullPathsv.find_last_of('.'));
+    bool isPng = equalIgnoreCase(extensionPre, ".png");
 
-    // convert extension to lowercase
-    std::string extension(extensionPre.size(), '\0');
-    std::transform(extensionPre.begin(), extensionPre.end(), extension.begin(), ::tolower);
-
-    if (extension != ".png") {
+    if (!isPng) {
 #ifdef BLAZE_DEBUG
         log::warn("Non-PNG image is being loaded, using builtin handler ({})", path);
 #endif
-        return CCTextureCache::addImage(path, false);
+        return CCTextureCache::addImage(path, ignoreSuffix);
     }
 
     size_t size = 0;
     auto buffer = LoadManager::get().readFile(fullPath.c_str(), size, true);
 
     if (!buffer || size == 0) {
-        log::warn("Failed to load image at path {}, using builtin handler", fullPath);
-        return CCTextureCache::addImage(path, false);
+        // log::debug("Failed to read image at path {}, returning null", fullPath);
+        // return CCTextureCache::addImage(path, false);
+        return nullptr;
     }
 
     auto image = new CCImage();
     auto res = static_cast<CCImageExt*>(image)->initWithSPNGOrCache(buffer.get(), size, fullPath.data());
     if (!res) {
-        log::warn("Failed to load image at path {}, using builtin handler: {}", fullPath, res.unwrapErr());
-        return CCTextureCache::addImage(path, false);
+        log::warn("Failed to decode image at path {}, returning null: {}", fullPath, res.unwrapErr());
+        // return CCTextureCache::addImage(path, false);
+        image->release();
+        return nullptr;
     }
 
     auto texture = new CCTexture2D();
@@ -88,5 +103,12 @@ CCTexture2D* BTextureCache::loadTexture(const char* path) {
 
     return texture;
 }
+
+struct CCTextureCacheHook : Modify<CCTextureCacheHook, CCTextureCache> {
+    $override
+    CCTexture2D* addImage(const char* path, bool ignoreSuffix) {
+        return BTextureCache::get().loadTexture(path, ignoreSuffix);
+    }
+};
 
 } // namespace blaze

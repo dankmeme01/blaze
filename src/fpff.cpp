@@ -1,5 +1,6 @@
 #include <Geode/modify/CCFileUtils.hpp>
 #include <asp/sync/SpinLock.hpp>
+#include <asp/time.hpp>
 #include "fpff.hpp"
 
 using namespace geode::prelude;
@@ -31,6 +32,13 @@ struct HookedFileUtils : public Modify<HookedFileUtils, CCFileUtils> {
     $override
     gd::string fullPathForFilename(const char* pszFileName, bool skipSuffix) {
         return blaze::fullPathForFilename(pszFileName, skipSuffix);
+    }
+
+    $override
+    void purgeCachedEntries() {
+        CCFileUtils::purgeCachedEntries();
+        auto guard = g_lock.lock();
+        g_cache.clear();
     }
 };
 
@@ -81,6 +89,32 @@ void setFileUtilsThreadSafe(bool threadSafe) {
     g_threadSafe.store(threadSafe, std::memory_order::release);
 }
 
+static void cachePath(uint64_t hash, const gd::string& path) {
+    if (g_threadSafe.load(std::memory_order::acquire)) {
+        auto guard = g_lock.lock();
+        g_cache.emplace(hash, path);
+    } else {
+        g_cache.emplace(hash, path);
+    }
+}
+
+static gd::string getCachedPath(uint64_t hash) {
+    if (g_threadSafe.load(std::memory_order::acquire)) {
+        auto guard = g_lock.lock();
+        auto it = g_cache.find(hash);
+        if (it != g_cache.end()) {
+            return it->second;
+        }
+    } else {
+        auto it = g_cache.find(hash);
+        if (it != g_cache.end()) {
+            return it->second;
+        }
+    }
+
+    return {};
+}
+
 gd::string fullPathForFilename(std::string_view input, bool ignoreSuffix) {
     if (input.empty()) {
         return {};
@@ -106,17 +140,9 @@ gd::string fullPathForFilename(std::string_view input, bool ignoreSuffix) {
         hash ^= 0xdeadbeefdeadbeef;
     }
 
-    if (g_threadSafe.load(std::memory_order::acquire)) {
-        auto guard = g_lock.lock();
-        auto it = g_cache.find(hash);
-        if (it != g_cache.end()) {
-            return it->second;
-        }
-    } else {
-        auto it = g_cache.find(hash);
-        if (it != g_cache.end()) {
-            return it->second;
-        }
+    auto cached = getCachedPath(hash);
+    if (!cached.empty()) {
+        return cached;
     }
 
     auto& fu = HookedFileUtils::get();
@@ -159,25 +185,20 @@ gd::string fullPathForFilename(std::string_view input, bool ignoreSuffix) {
     for (const auto& sp : searchPaths) {
         auto fp = blaze::getPathForFilename(filename, "", sp);
         if (!fp.empty()) {
-            // store in the cache
-            if (g_threadSafe.load(std::memory_order::acquire)) {
-                auto guard = g_lock.lock();
-                g_cache.emplace(hash, fp);
-            } else {
-                g_cache.emplace(hash, fp);
-            }
-
+            cachePath(hash, fp);
             return fp;
         }
     }
 
     if (ignoreSuffix) {
         // if all else fails, accept defeat
-        // log::warn("blaze: could not find full path for '{}' (transformed: '{}')", input, filename);
+        cachePath(hash, gd::string{filename.data(), filename.size()});
         return gd::string{filename.data(), filename.size()};
     } else {
         // try to find the file without the quality suffix
-        return fullPathForFilename(input, true);
+        auto ret = fullPathForFilename(input, true);
+        cachePath(hash, ret);
+        return ret;
     }
 }
 
