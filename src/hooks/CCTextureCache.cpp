@@ -96,7 +96,7 @@ CCTexture2D* BTextureCache::loadTexture(const char* path, bool ignoreSuffix) {
     }
 
     auto _lck = s_texturesMutex.lock();
-    this->m_pTextures->setObject(texture, path);
+    this->m_pTextures->setObject(texture, fullPath);
 
     texture->release();
     image->release();
