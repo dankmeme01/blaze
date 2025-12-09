@@ -77,6 +77,7 @@ void LoadManager::queueForCache(const std::filesystem::path& path, std::vector<u
 
 std::unique_ptr<uint8_t[]> LoadManager::readFile(const char* path, size_t& outSize, bool absolutePath) {
     ZoneScoped;
+    blaze::ThreadSafeFileUtilsGuard _guard;
 
 #ifdef GEODE_IS_ANDROID
     unsigned long s;

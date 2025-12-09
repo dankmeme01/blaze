@@ -74,6 +74,8 @@ Result<> CCImageExt::initWithSPNGOrCache(const uint8_t* buffer, size_t size, con
         return this->initWithSPNG(buffer, size);
     }
 
+    blaze::ThreadSafeFileUtilsGuard _guard;
+
     // check if we have cached it already
     auto checksum = blaze::crc32(buffer, size);
     uint8_t* cachedBuf = nullptr;

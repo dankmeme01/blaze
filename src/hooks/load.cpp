@@ -89,6 +89,7 @@ struct AsyncImageLoadRequest {
     // Loads the encoded image data into memory. Does nothing if the image is already loaded.
     inline Result<> loadImage() {
         ZoneScoped;
+        blaze::ThreadSafeFileUtilsGuard _guard;
 
         if (imageData) return Ok();
 
@@ -164,6 +165,7 @@ struct AsyncImageLoadRequest {
         BLAZE_ASSERT(texture != nullptr);
 
         ZoneScoped;
+        blaze::ThreadSafeFileUtilsGuard _guard;
 
         {
             ZoneScopedN("addSpriteFrames loading plist");

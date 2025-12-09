@@ -14,7 +14,7 @@ namespace blaze {
         // Calls `m_pTextures->setObject` in a thread-safe manner
         void setTexture(const gd::string& key, cocos2d::CCTexture2D* texture);
 
-        // Optimized and thread-safe implementation of `addImage`
+        // Optimized implementation of `addImage`, thread-safe only if the texture has already been laoded.
         cocos2d::CCTexture2D* loadTexture(const char* path);
     };
 } // namespace blaze

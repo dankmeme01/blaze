@@ -27,6 +27,8 @@ void BTextureCache::setTexture(const gd::string& key, CCTexture2D* texture) {
 }
 
 CCTexture2D* BTextureCache::loadTexture(const char* path) {
+    blaze::ThreadSafeFileUtilsGuard _guard;
+
     auto fullPath = blaze::fullPathForFilename(path, false);
     if (fullPath.empty()) {
         return nullptr;
