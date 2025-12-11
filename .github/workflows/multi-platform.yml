@@ -34,7 +34,7 @@ jobs:
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
         with:
-          sdk: nightly
+          # sdk: nightly
           configure-args: '-DBLAZE_RELEASE=ON'
           combine: true
           target: ${{ matrix.config.target }}
