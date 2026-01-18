@@ -8,6 +8,7 @@
 #include <Geode/modify/CCObject.hpp>
 #include <Windows.h>
 #include <timeapi.h>
+#include <ntstatus.h>
 
 using namespace geode::prelude;
 
@@ -63,7 +64,7 @@ enum class SleepVariant {
     Pause,
 };
 
-using SleepFn = void(*)(uint32_t);
+using SleepFn = void(*)(uint64_t);
 static SleepFn g_sleep = nullptr;
 
 void calibrate_tsc();
@@ -74,11 +75,11 @@ static __forceinline uint64_t rdtsc() {
     return __rdtscp(&aux);
 }
 
-static __forceinline uint32_t ns_to_cycles(uint64_t ns) {
-    return (uint32_t)((double)ns * g_tsc_hz / 1'000'000'000.0);
+static __forceinline uint64_t ns_to_cycles(uint64_t ns) {
+    return (uint64_t)((double)ns * g_tsc_hz / 1'000'000'000.0);
 }
 
-static __forceinline uint64_t cycles_to_ns(uint32_t cycles) {
+static __forceinline uint64_t cycles_to_ns(uint64_t cycles) {
     return (uint64_t)((double)cycles * 1'000'000'000.0 / g_tsc_hz);
 }
 
@@ -149,7 +150,12 @@ class $modify(CCApplication) {
             uint64_t elapsedTicks = currentCounter - lastCounter;
             uint64_t ticksToWait = targetTicks - elapsedTicks;
 
-            bool shouldProcessFrame = (!m_bFullscreen && !m_bForceTimer) || (elapsedTicks >= targetTicks);
+            // i changed this from the vanilla logic because it made no sense to me lol
+            // bool shouldProcessFrame = (!m_bFullscreen && !m_bForceTimer) || (elapsedTicks >= targetTicks);
+            bool shouldProcessFrame = !m_bForceTimer || elapsedTicks >= targetTicks;
+
+            // log::debug("spf: {}, fullscreen: {}, force timer: {}, to wait: {}ns", shouldProcessFrame, m_bFullscreen, m_bForceTimer, cycles_to_ns(ticksToWait));
+
             if (!shouldProcessFrame) {
                 // if there's a lot of time to wait, yield to the OS
                 if (ticksToWait >= yieldDeadline) {
@@ -197,7 +203,9 @@ class $modify(CCApplication) {
             );
             float displayDeltaTime = actualDeltaTime;
 
-            if (!m_bFullscreen && !m_bForceTimer) {
+            // changed logic here too, idk why fullscreen check was needed
+            // if (!m_bFullscreen && !m_bForceTimer) {
+            if (!m_bForceTimer) {
                 s_accumulatedDelta += actualDeltaTime;
                 s_frameCount++;
 
@@ -245,7 +253,7 @@ class $modify(CCApplication) {
     }
 };
 
-static void __attribute__((target("mwaitx"))) sl_mwaitx(uint32_t cycles)  {
+static void __attribute__((target("mwaitx"))) sl_mwaitx(uint64_t cycles)  {
     constexpr uint32_t timer_enable = 0x2;
 
     alignas(64) uint64_t monitorVar = 0;
@@ -253,12 +261,13 @@ static void __attribute__((target("mwaitx"))) sl_mwaitx(uint32_t cycles)  {
     _mm_mwaitx(timer_enable, 0, cycles);
 }
 
-static void __attribute__((target("waitpkg"))) sl_tpause(uint32_t cycles)  {
+static void __attribute__((target("waitpkg"))) sl_tpause(uint64_t cycles)  {
     constexpr uint32_t cstate = 0x0;
-    _tpause(cstate, rdtsc() + cycles);
+    auto deadline = rdtsc() + (uint64_t)cycles;
+    _tpause(cstate, deadline);
 }
 
-static void sl_pause(uint32_t cycles) {
+static void sl_pause(uint64_t cycles) {
     uint64_t end = rdtsc() + cycles;
     while (rdtsc() < end) {
         _mm_pause();
@@ -279,9 +288,12 @@ static bool hasWaitpkg() {
 }
 
 static bool hasMwaitx() {
-    CpuidResult vals;
-    __cpuidex((int*)&vals, 0x80000001, 0);
-    return (vals.ecx & (1u << 29)) != 0;
+    // mwaitx impl hasnt been tested as i only have an intel cpu
+    return false;
+
+    // CpuidResult vals;
+    // __cpuidex((int*)&vals, 0x80000001, 0);
+    // return (vals.ecx & (1u << 29)) != 0;
 }
 
 static SleepVariant getBestVariant() {
@@ -313,6 +325,35 @@ void initSleep() {
 }
 
 void calibrate_tsc() {
+    // https://gist.github.com/pmttavara/6f06fc5c7679c07375483b06bb77430c
+    // fast path:  load kernel-mapped memory page
+
+    auto ntdll = GetModuleHandleA("ntdll.dll");
+    int (*NtQuerySystemInformation)(int, void *, unsigned int, unsigned int *) =
+        (int (*)(int, void *, unsigned int, unsigned int *))GetProcAddress(ntdll, "NtQuerySystemInformation");
+
+    if (NtQuerySystemInformation) {
+        volatile uint64_t *hypervisor_shared_page = NULL;
+        unsigned int size = 0;
+
+        // SystemHypervisorSharedPageInformation == 0xc5
+        int result = (NtQuerySystemInformation)(0xc5, (void *)&hypervisor_shared_page, sizeof(hypervisor_shared_page), &size);
+
+        // success
+        if (size == sizeof(hypervisor_shared_page) && result >= 0) {
+            // docs say ReferenceTime = ((VirtualTsc * TscScale) >> 64)
+            //      set ReferenceTime = 10000000 = 1 second @ 10MHz, solve for VirtualTsc
+            //       =>    VirtualTsc = 10000000 / (TscScale >> 64)
+            auto freq = (10000000ull << 32) / (hypervisor_shared_page[1] >> 32);
+            // If your build configuration supports 128 bit arithmetic, do this:
+            // tsc_freq = ((unsigned __int128)10000000ull << (unsigned __int128)64ull) / hypervisor_shared_page[1];
+
+            g_tsc_hz = (double)freq;
+            log::info("TSC frequency (hypervisor): {:.2f}", g_tsc_hz);
+            return;
+        }
+    }
+
     LARGE_INTEGER freq;
     LARGE_INTEGER start, end;
 
@@ -332,7 +373,7 @@ void calibrate_tsc() {
         (double)freq.QuadPart;
 
     g_tsc_hz = (double)(tsc_end - tsc_start) / elapsed_sec;
-    log::info("TSC frequency: {:.2f}", g_tsc_hz);
+    log::info("TSC frequency (manual): {:.2f}", g_tsc_hz);
 }
 
 #endif
