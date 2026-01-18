@@ -864,6 +864,10 @@ void blaze::startPreInit() {
 
 #ifdef GEODE_IS_WINDOWS
 class $modify(CCApplication) {
+    static void onModify(auto& self) {
+        BLAZE_HOOK_FIRST(cocos2d::CCApplication::run);
+    }
+
     int run() {
         blaze::startPreInit();
 

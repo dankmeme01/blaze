@@ -17,6 +17,9 @@ def main(build: Build):
         build.add_source_file("src/hooks/load.mm")
         build.add_raw_statement("set_source_files_properties(${OBJC_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)")
 
+    if build.platform.is_windows():
+        build.link_library("winmm")
+
     build.set_cache_variable("GEODE_DISABLE_PRECOMPILED_HEADERS", "ON", "BOOL", force=True)
 
     build.add_include_dir("external/")
