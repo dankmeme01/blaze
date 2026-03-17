@@ -164,15 +164,19 @@ gd::string fullPathForFilename(std::string_view input, bool ignoreSuffix) {
     };
 
     if (!ignoreSuffix) {
-        std::string_view extension = input.substr(input.find_last_of('.'));
-        std::string_view base = input.substr(0, input.find_last_of('.'));
+        auto period = input.find_last_of('.');
+        std::string_view base = input.substr(0, period);
 
         bool hasQualitySuffix = base.ends_with("-uhd") || base.ends_with("-hd");
 
         if (!hasQualitySuffix) {
             append(base);
             append(getQualitySuffix(getTextureQuality()));
-            append(extension);
+
+            if (period != std::string::npos) {
+                std::string_view extension = input.substr(period);
+                append(extension);
+            }
         }
     }
 
