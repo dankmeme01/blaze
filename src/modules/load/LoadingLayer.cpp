@@ -1,14 +1,14 @@
 #include "LoadingLayer.hpp"
+#include <AsyncLoad/FileUtils.hpp>
 
 using namespace geode::prelude;
 
 namespace blaze {
 
 bool HookedLoadingLayer::init(bool refresh) {
-    // TODO: rewrite init itself
-    if (!LoadingLayer::init(refresh)) return false;
-
     LoadModule::get().onLoadingLayerInit();
+
+    if (!LoadingLayer::init(refresh)) return false;
 
     // remove scheduled `loadAssets` call
     auto am = CCDirector::get()->getActionManager();

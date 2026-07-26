@@ -29,6 +29,7 @@ private:
     void populateFpffCache();
     void loadImage(geode::ZStringView name);
     void loadSheet(geode::ZStringView name);
+    void loadFont(geode::ZStringView name);
 };
 
 }

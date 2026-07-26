@@ -49,11 +49,36 @@ void LoadModule::loadImage(ZStringView name) {
     }).leak();
 }
 
+void LoadModule::loadFont(ZStringView name) {
+    auto view = name.view();
+    if (view.ends_with(".fnt")) {
+        view.remove_suffix(4);
+    }
+
+    this->loadImage(fmt::format("{}.png", view));
+    // TODO: for now, simply load the name.png because that is what robtop does.
+    // in the future wae want to split this into 2 tasks:
+    // 1. load xxx.fnt using a custom parser derived from cocos CCBMFontConfiguration
+    // 2. take the png file that's mentioned in the fnt file and asynchronously load it using ALManager::loadTexture
+}
+
 void LoadModule::onLoadingLayerInit() {
     // search paths have been initialized, this is ok now
     arc::spawnBlocking<void>([&] {
         this->populateFpffCache();
     });
+
+    // now load the resources required for loading layer
+    this->loadSheet("GJ_LaunchSheet");
+    this->loadImage("game_bg_01_001.png");
+    this->loadImage("slidergroove.png");
+    this->loadImage("sliderBar.png");
+    this->loadFont("goldFont");
+
+    while (m_awaitingTasks > 0) {
+        ALManager::get().lendMainThread();
+        std::this_thread::yield();
+    }
 }
 
 void LoadModule::onLoadStart() {
@@ -85,7 +110,12 @@ void LoadModule::onLoadStart() {
     this->loadImage("GJ_square05.png");
     this->loadImage("gravityLine_001.png");
 
-    // TODO: bigFont.fnt, chatFont.fnt
+    this->loadFont("bigFont.fnt");
+    this->loadFont("chatFont.fnt");
+
+    // GD doesn't load the ones below on LoadingLayer, but they are quickly used in MenuLayer
+    this->loadImage("groundSquare_01_001.png");
+    this->loadImage("square.png");
 }
 
 void LoadModule::onLoadFinished() {
