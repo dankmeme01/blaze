@@ -1,0 +1,16 @@
+{
+	"geode": "5.8.2",
+	"gd": {
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
+	},
+	"id": "dankmeme.blaze",
+	"name": "Blaze",
+	"version": "v1.0.0",
+	"developer": "dankmeme",
+	"early-load": true,
+	"description": "",
+	"dependencies": {}
+}
