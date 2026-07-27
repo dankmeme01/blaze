@@ -22,4 +22,27 @@ class $modify(CCApplication) {
     }
 };
 
+
+}
+
+namespace blaze::platform {
+
+asp::Instant getProcessStartTime() {
+    FILETIME ftCreate, ftExit, ftKernel, ftUser;
+    GetProcessTimes(GetCurrentProcess(), &ftCreate, &ftExit, &ftKernel, &ftUser);
+
+    ULARGE_INTEGER ull;
+    ull.LowPart = ftCreate.dwLowDateTime;
+    ull.HighPart = ftCreate.dwHighDateTime;
+
+    // 100-nanosecond intervals between Jan 1, 1601 and Jan 1, 1970
+    const uint64_t EPOCH_DIFFERENCE = 116444736000000000ULL;
+
+    auto unix = asp::Duration::fromMicros((ull.QuadPart - EPOCH_DIFFERENCE) / 10ULL);
+    auto unixNow = asp::SystemTime::now().timeSinceEpoch();
+    auto delta = unixNow - unix;
+
+    return asp::Instant::now() - delta;
+}
+
 }

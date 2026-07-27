@@ -20,6 +20,7 @@ public:
     size_t runningTasks() const;
 
 private:
+    asp::Instant m_processStartTime;
     asp::Instant m_entryTime;
     asp::Instant m_loadStartTime;
     asp::Instant m_loadFinishTime;

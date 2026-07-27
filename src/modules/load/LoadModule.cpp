@@ -3,6 +3,7 @@
 #include <AsyncLoad/FileUtils.hpp>
 #include <AsyncLoad/SpriteFrames.hpp>
 #include <asp/fs.hpp>
+#include <platform/platform.hpp>
 
 using namespace geode::prelude;
 using namespace AsyncLoad;
@@ -13,6 +14,7 @@ LoadModule::LoadModule() {}
 
 void LoadModule::onEntry() {
     m_entryTime = asp::Instant::now();
+    m_processStartTime = platform::getProcessStartTime();
 
     // TODO: module disabled, do nothing?
 }
@@ -125,7 +127,8 @@ void LoadModule::onLoadFinished() {
 void LoadModule::onMenuLayer() {
     m_menuLayerTime = asp::Instant::now();
 
-    log::info("Game fully loaded in {}!", m_entryTime.elapsed());
+    log::info("Game fully loaded in {} ({} excluding OS startup)!", m_processStartTime.elapsed(), m_entryTime.elapsed());
+    log::debug("- Time before Geode entry: {}", m_entryTime.durationSince(m_processStartTime));
     log::debug("- Load start: {}", m_loadStartTime.durationSince(m_entryTime));
     log::debug("- Load finish: {}", m_loadFinishTime.durationSince(m_loadStartTime));
     log::debug("- Time to MenuLayer: {}", m_menuLayerTime.durationSince(m_loadFinishTime));
