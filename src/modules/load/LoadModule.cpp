@@ -23,7 +23,7 @@ void LoadModule::loadSheet(ZStringView name) {
     m_awaitingTasks += 1;
 
     auto& alm = ALManager::get();
-    alm.loadSpritesheet(name, [this, name, start = asp::Instant::now()](Result<> result) {
+    alm.loadSpritesheet(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<> result) {
         m_awaitingTasks--;
 
         if (!result) {
@@ -39,7 +39,7 @@ void LoadModule::loadImage(ZStringView name) {
     m_awaitingTasks += 1;
 
     auto& alm = ALManager::get();
-    alm.loadTexture(name, [this, name, start = asp::Instant::now()](Result<Ref<CCTexture2D>> result) {
+    alm.loadTexture(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<Ref<CCTexture2D>> result) {
         m_awaitingTasks--;
 
         if (!result) {
