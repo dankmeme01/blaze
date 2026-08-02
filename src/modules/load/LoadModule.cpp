@@ -95,6 +95,7 @@ void LoadModule::onLoadStart() {
     this->loadSheet("FireSheet_01");
     this->loadSheet("GJ_ShopSheet");
     this->loadSheet("GJ_ParticleSheet");
+    this->loadSheet("PixelSheet_01");
 
     this->loadImage("smallDot.png");
     this->loadImage("square02_001.png");
