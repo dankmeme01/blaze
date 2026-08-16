@@ -41,7 +41,8 @@ private:
     void addHookHelper(auto& modify, auto hookName) {
         auto res = modify.getHook(hookName);
         if (!res) {
-            geode::log::warn("Missing hook: {} for {}", hookName, arc::getTypename<Derived>());
+            auto n = arc::getTypename<Derived>();
+            geode::log::warn("Missing hook: {} for {}", hookName, std::string_view{n.first, n.second});
         } else {
             this->addHook(res.unwrap());
         }

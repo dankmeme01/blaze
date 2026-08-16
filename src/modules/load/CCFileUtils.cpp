@@ -7,7 +7,7 @@ using namespace geode::prelude;
 
 namespace blaze {
 
-struct HookedCCFileUtils : geode::Modify<HookedCCFileUtils, CCFileUtils> {
+struct HookedCCFileUtils : Modify<HookedCCFileUtils, CCFileUtils> {
     static void onModify(auto& self) {
         LoadModule::get().addHooks(
             self,
@@ -15,7 +15,7 @@ struct HookedCCFileUtils : geode::Modify<HookedCCFileUtils, CCFileUtils> {
             "cocos2d::CCFileUtils::getFileData"
         );
 
-        (void) self.setHookPriority("cocos2d::CCFileUtils::fullPathForFilename", geode::Priority::Replace);
+        (void) self.setHookPriority("cocos2d::CCFileUtils::fullPathForFilename", Priority::Replace);
     }
 
     $override

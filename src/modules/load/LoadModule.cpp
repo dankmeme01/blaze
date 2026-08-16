@@ -2,6 +2,7 @@
 #include <Geode/modify/MenuLayer.hpp>
 #include <AsyncLoad/FileUtils.hpp>
 #include <AsyncLoad/SpriteFrames.hpp>
+#include <AsyncLoad/Fonts.hpp>
 #include <asp/fs.hpp>
 #include <platform/platform.hpp>
 
@@ -58,10 +59,11 @@ void LoadModule::loadFont(ZStringView name) {
     }
 
     this->loadImage(fmt::format("{}.png", view));
-    // TODO: for now, simply load the name.png because that is what robtop does.
-    // in the future wae want to split this into 2 tasks:
-    // 1. load xxx.fnt using a custom parser derived from cocos CCBMFontConfiguration
-    // 2. take the png file that's mentioned in the fnt file and asynchronously load it using ALManager::loadTexture
+
+    // load font
+    auto start = asp::Instant::now();
+    FNTConfigLoadFile(fmt::format("{}.fnt", name).c_str());
+    log::debug("Loaded font {} in {}", name, start.elapsed());
 }
 
 void LoadModule::onLoadingLayerInit() {
@@ -113,8 +115,8 @@ void LoadModule::onLoadStart() {
     this->loadImage("GJ_square05.png");
     this->loadImage("gravityLine_001.png");
 
-    this->loadFont("bigFont.fnt");
-    this->loadFont("chatFont.fnt");
+    this->loadFont("bigFont");
+    this->loadFont("chatFont");
 
     // GD doesn't load the ones below on LoadingLayer, but they are quickly used in MenuLayer
     this->loadImage("groundSquare_01_001.png");
