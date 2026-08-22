@@ -39,7 +39,7 @@ class $modify(ZipUtils) {
 
         if (!res) {
             log::warn("ccDeflateMemory failed, calling original: {}", res.unwrapErr());
-            return ZipUtils::ccDeflateMemory(input, size, outp);
+            return ZipUtils::ccInflateMemory(input, size, outp);
         }
 
         auto buf = std::move(res).unwrap();
@@ -49,7 +49,7 @@ class $modify(ZipUtils) {
     }
 
     $override
-    static int ccInflateMemoryWithHint(unsigned char* input, unsigned int size, unsigned char** outp, unsigned int hint) {
+    static int ccInflateMemoryWithHint(unsigned char* input, unsigned int size, unsigned char** outp, unsigned int *outLength, unsigned int hint) {
         return ccInflateMemory(input, size, outp);
     }
 
