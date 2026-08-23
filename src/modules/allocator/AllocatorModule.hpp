@@ -5,8 +5,7 @@ namespace blaze {
 
 class AllocatorModule : public Module<AllocatorModule> {
 public:
-AllocatorModule();
-private:
+    AllocatorModule();
 };
 
 }
