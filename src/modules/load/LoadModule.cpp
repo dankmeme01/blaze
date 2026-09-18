@@ -33,14 +33,14 @@ void LoadModule::loadSheet(ZStringView name) {
         }
 
         log::debug("Loaded spritesheet {} in {}", name, start.elapsed());
-    }).leak();
+    });
 }
 
 void LoadModule::loadImage(ZStringView name) {
     m_awaitingTasks += 1;
 
     auto& alm = ALManager::get();
-    alm.loadTexture(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<Ref<CCTexture2D>> result) {
+    auto handle = alm.loadTextureEager(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<Ref<CCTexture2D>> result) {
         m_awaitingTasks--;
 
         if (!result) {
@@ -49,7 +49,8 @@ void LoadModule::loadImage(ZStringView name) {
         }
 
         log::debug("Loaded image {} in {}", name, start.elapsed());
-    }).leak();
+    });
+    handle.setName(fmt::format("Blaze Load {}", name));
 }
 
 void LoadModule::loadFont(ZStringView name) {
@@ -173,7 +174,7 @@ void LoadModule::loadModResourcesBlocking(std::vector<Mod*> mods) {
                 }
 
                 log::debug("Loaded spritesheet {} in {}", sheet, start.elapsed());
-            }).leak();
+            });
         }
     }
 
