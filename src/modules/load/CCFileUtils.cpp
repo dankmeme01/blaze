@@ -48,6 +48,8 @@ struct HookedCCFileUtils : Modify<HookedCCFileUtils, CCFileUtils> {
             buf = transformToText(buf);
         }
 
+        BLAZE_TRACE("getFileData(\"{}\", \"{}\") -> {} bytes", pszFileName, pszMode, buf.size);
+
         if (pSize) *pSize = buf.size;
 
         return buf.data.release();
