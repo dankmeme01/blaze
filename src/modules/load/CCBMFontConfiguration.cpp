@@ -5,18 +5,35 @@
 
 using namespace geode::prelude;
 
+// ios has init inlined :D
+#ifdef __APPLE__
+# define HOOK_CREATE
+#endif
+
 namespace blaze {
 
 struct HookedCCBMFontConfig : Modify<HookedCCBMFontConfig, CCBMFontConfiguration> {
     static void onModify(auto& self) {
-        LoadModule::get().addHooks(
-            self,
-            "cocos2d::CCBMFontConfiguration::initWithFNTfile"
-        );
+        auto fname =
+#ifdef HOOK_CREATE
+            "cocos2d::CCBMFontConfiguration::create";
+#else
+            "cocos2d::CCBMFontConfiguration::initWithFNTfile";
+#endif
 
-        (void) self.setHookPriority("cocos2d::CCBMFontConfiguration::initWithFNTfile", Priority::Replace);
+        LoadModule::get().addHooks(self, fname);
+        (void) self.setHookPriority(fname, Priority::Replace);
     }
 
+#ifdef HOOK_CREATE
+    static CCBMFontConfiguration* create(const char* file) {
+        auto config = AsyncLoad::loadFont(file, true);
+        if (!config) return nullptr;
+
+        config->autorelease();
+        return config;
+    }
+#else
     $override
     bool initWithFNTfile(const char* file) {
         // since this is always called on main thread (by us too), use cache
@@ -27,6 +44,7 @@ struct HookedCCBMFontConfig : Modify<HookedCCBMFontConfig, CCBMFontConfiguration
 
         return true;
     }
+#endif
 
     void moveFieldsFrom(CCBMFontConfiguration* other) {
         m_pFontDefDictionary = std::exchange(other->m_pFontDefDictionary, nullptr);
