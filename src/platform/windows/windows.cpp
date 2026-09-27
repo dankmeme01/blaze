@@ -22,7 +22,6 @@ class $modify(CCApplication) {
     }
 };
 
-
 }
 
 namespace blaze::platform {

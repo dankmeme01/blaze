@@ -67,7 +67,7 @@ class $modify(ZipUtils) {
         }
 
 #ifdef GEODE_IS_ANDROID
-        return gd::string{encoded.begin(), encoded.end()};
+        return gd::string{encoded.data(), encoded.size()};
 #else
         return encoded;
 #endif

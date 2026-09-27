@@ -19,21 +19,22 @@ struct HookedCCBMFontConfig : Modify<HookedCCBMFontConfig, CCBMFontConfiguration
 
     $override
     bool initWithFNTfile(const char* file) {
-        auto config = AsyncLoad::loadFont(file);
+        // since this is always called on main thread (by us too), use cache
+        auto config = AsyncLoad::loadFont(file, true);
         if (!config) return false;
 
-        this->copyFrom(config);
+        this->moveFieldsFrom(config);
 
         return true;
     }
 
-    void copyFrom(CCBMFontConfiguration* other) {
-        m_pFontDefDictionary = other->m_pFontDefDictionary;
+    void moveFieldsFrom(CCBMFontConfiguration* other) {
+        m_pFontDefDictionary = std::exchange(other->m_pFontDefDictionary, nullptr);
         m_nCommonHeight = other->m_nCommonHeight;
         m_tPadding = other->m_tPadding;
-        m_sAtlasName = other->m_sAtlasName;
-        m_pKerningDictionary = other->m_pKerningDictionary;
-        m_pCharacterSet = other->m_pCharacterSet;
+        m_sAtlasName = std::move(other->m_sAtlasName);
+        m_pKerningDictionary = std::exchange(other->m_pKerningDictionary, nullptr);
+        m_pCharacterSet = std::exchange(other->m_pCharacterSet, nullptr);
     }
 };
 
