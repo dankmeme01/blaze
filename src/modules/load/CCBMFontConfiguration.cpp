@@ -27,8 +27,11 @@ struct HookedCCBMFontConfig : Modify<HookedCCBMFontConfig, CCBMFontConfiguration
 
 #ifdef HOOK_CREATE
     static CCBMFontConfiguration* create(const char* file) {
-        auto config = AsyncLoad::loadFont(file, true);
-        if (!config) return nullptr;
+        auto config = AsyncLoad::loadFont(file, true).take();
+        if (!config) {
+            log::warn("loadFont(\"{}\") failed!", file);
+            return nullptr;
+        }
 
         config->autorelease();
         return config;
