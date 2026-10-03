@@ -250,6 +250,7 @@ static void doHook(MallocHook& hook) {
 }
 
 static void smokeTest();
+static void onMiError();
 
 $execute {
     // TODO: only run this when module is enabled
@@ -312,17 +313,34 @@ $execute {
     }
 
     mi_register_output([](const char* msg, void*) {
-        log::info("(mimalloc): {}", msg);
+        std::string_view sv{msg};
+        log::info("(mimalloc): {}", sv);
+        if (sv.contains("assertion failed")) {
+            onMiError();
+        }
     }, nullptr);
 
     mi_register_error([](int err, void*) {
-        g_errors.fetch_add(1, std::memory_order::relaxed);
         log::error("(mimalloc) error: {}", err);
+        onMiError();
     }, nullptr);
 
 #ifdef BLAZE_DEBUG
     smokeTest();
 #endif
+}
+
+void onMiError() {
+    g_errors.fetch_add(1, std::memory_order::relaxed);
+
+    // for debugging
+    // static bool reentrant = false;
+
+    // if (!reentrant) {
+    //     reentrant = true;
+    //     __debugbreak();
+    //     reentrant = false;
+    // }
 }
 
 void smokeTest() {

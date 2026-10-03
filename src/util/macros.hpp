@@ -1,4 +1,5 @@
 #pragma once
+#include "assert.hpp"
 
 #ifdef BLAZE_DEBUG
 

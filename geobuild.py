@@ -12,6 +12,7 @@ def main(build: Build):
     # build.add_include_dir("include")
     build.add_source_dir("src/*.cpp", recursive=False)
     build.add_source_dir("src/modules/*.cpp", recursive=True)
+    build.add_source_dir("src/util/*.cpp", recursive=True)
     build.add_source_dir(f"src/platform/{config.platform.platform_str(False)}/")
 
     build.enable_mod_json_generation("mod.template.json")
@@ -47,4 +48,6 @@ def main(build: Build):
         "MI_BUILD_TESTS": "OFF",
         "MI_SKIP_COLLECT_ON_EXIT": "ON",
     }, link_name="mimalloc-static")
+
+    # build.add_cpm_dep("martinus/unordered_dense", "v5.3.0", link_name="unordered_dense::unordered_dense")
 
