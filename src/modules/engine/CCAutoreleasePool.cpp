@@ -171,15 +171,15 @@ class $modify(CCAutoreleaseObjectHook, CCObject) {
 }
 
 // benchmark
-$on_mod(Loaded) {
-    auto t1 = asp::Instant::now();
-    for (size_t i = 0; i < 4 * 1024 * 1024; i++) {
-        auto obj = new CCObject();
-        obj->autorelease();
-    }
-    auto t2 = asp::Instant::now();
-    CCPoolManager::sharedPoolManager()->pop();
-    auto t3 = asp::Instant::now();
+// $on_mod(Loaded) {
+//     auto t1 = asp::Instant::now();
+//     for (size_t i = 0; i < 4 * 1024 * 1024; i++) {
+//         auto obj = new CCObject();
+//         obj->autorelease();
+//     }
+//     auto t2 = asp::Instant::now();
+//     CCPoolManager::sharedPoolManager()->pop();
+//     auto t3 = asp::Instant::now();
 
-    log::debug("creation took {}, pop took {}", t2.durationSince(t1), t3.durationSince(t2));
-}
+//     log::debug("creation took {}, pop took {}", t2.durationSince(t1), t3.durationSince(t2));
+// }
