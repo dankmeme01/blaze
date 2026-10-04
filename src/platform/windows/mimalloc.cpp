@@ -354,19 +354,19 @@ static std::optional<Module> moduleFromAddr(void* addr) {
 void onMiError() {
     g_errors.fetch_add(1, std::memory_order::relaxed);
 
-    std::array<std::byte, 4096> buf;
-    std::pmr::monotonic_buffer_resource pool{buf.data(), buf.size()};
-    using stacktrace_custom = std::basic_stacktrace<std::pmr::polymorphic_allocator<std::stacktrace_entry>>;
+    // std::array<std::byte, 4096> buf;
+    // std::pmr::monotonic_buffer_resource pool{buf.data(), buf.size()};
+    // using stacktrace_custom = std::basic_stacktrace<std::pmr::polymorphic_allocator<std::stacktrace_entry>>;
 
-    for (auto& frame : stacktrace_custom::current(0, 32, &pool)) {
-        auto module = moduleFromAddr(frame.native_handle());
-        if (module) {
-            auto rva = (uintptr_t)frame.native_handle() - (uintptr_t)module->base;
-            log::debug(" - {} + 0x{:x} ({})", module->name, rva, frame.native_handle());
-        } else {
-            log::debug(" - {}", frame.native_handle());
-        }
-    }
+    // for (auto& frame : stacktrace_custom::current(0, 32, &pool)) {
+    //     auto module = moduleFromAddr(frame.native_handle());
+    //     if (module) {
+    //         auto rva = (uintptr_t)frame.native_handle() - (uintptr_t)module->base;
+    //         log::debug(" - {} + 0x{:x} ({})", module->name, rva, frame.native_handle());
+    //     } else {
+    //         log::debug(" - {}", frame.native_handle());
+    //     }
+    // }
 
     // // for debugging
     // static bool reentrant = false;
