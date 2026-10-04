@@ -6,7 +6,16 @@ def main(build: Build):
     config = build.config
     debug = build.add_option("BLAZE_DEBUG", False, "Enable debug mode for blaze")
     harden_alloc = build.add_option("BLAZE_HARDEN_ALLOC", False, "Enable harden mode for mimalloc, reducing performance by a few % to detect memory errors")
-    debug_alloc = build.add_option("BLAZE_DEBUG_ALLOC", False, "Enable debug mode for mimalloc, makes the allocator very slow!!!")
+    debug_alloc = build.add_option("BLAZE_DEBUG_ALLOC", False, "Enable debug mode for mimalloc, makes the allocator very slow")
+    guard_alloc = build.add_option("BLAZE_GUARD_ALLOC", False, "Enable guarded allocations in mimalloc, makes the allocator abysmally slow but best for catching memory errors")
+
+    mimalloc_harden_level = 0
+    if guard_alloc:
+        mimalloc_harden_level = 3
+    elif debug_alloc:
+        mimalloc_harden_level = 2
+    elif harden_alloc:
+        mimalloc_harden_level = 1
 
     build.add_include_dir("src")
     # build.add_include_dir("include")
@@ -35,19 +44,34 @@ def main(build: Build):
         "LIBDEFLATE_BUILD_GZIP": "OFF",
     }, link_name="libdeflate_static")
 
-    # use tag till v3.5.1 or such is released: https://github.com/microsoft/mimalloc/issues/1370
-    build.add_cpm_dep("microsoft/mimalloc", "622d421", options={
+    mi_opts = {
         "MI_OVERRIDE": "OFF",
         "MI_XMALLOC": "ON",
-        "MI_SHOW_ERRORS": "ON" if debug else "OFF",
+        "MI_SHOW_ERRORS": "OFF",
         "MI_FREE_IS_CHECKED": "OFF",
-        "MI_DEBUG": "FULL" if debug_alloc else "OFF",
-        "MI_SECURE": "ON" if harden_alloc else "OFF",
+        "MI_DEBUG": "OFF",
+        "MI_SECURE": "OFF",
         "MI_BUILD_SHARED": "OFF",
         "MI_BUILD_STATIC": "ON",
         "MI_BUILD_TESTS": "OFF",
         "MI_SKIP_COLLECT_ON_EXIT": "ON",
-    }, link_name="mimalloc-static")
+    }
+
+    if mimalloc_harden_level >= 1:
+        # some slight hardening
+        mi_opts["MI_SECURE"] = "ON"
+
+    if mimalloc_harden_level >= 2:
+        # way more debugging, assertions, etc. fairly slow
+        mi_opts["MI_DEBUG"] = "FULL"
+        mi_opts["MI_SHOW_ERRORS"] = "ON"
+
+    if mimalloc_harden_level >= 3:
+        # highest and slowest level of security
+        mi_opts["MI_SECURE"] = "FULL"
+        mi_opts["MI_GUARDED"] = "ON"
+
+    build.add_cpm_dep("microsoft/mimalloc", "v3.5.3", options=mi_opts, link_name="mimalloc-static")
 
     # build.add_cpm_dep("martinus/unordered_dense", "v5.3.0", link_name="unordered_dense::unordered_dense")
 
