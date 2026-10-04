@@ -1,5 +1,7 @@
 #include <modules/allocator/AllocatorModule.hpp>
 #include <mimalloc.h>
+#include <stacktrace>
+#include <memory_resource>
 
 using namespace geode::prelude;
 
@@ -330,10 +332,43 @@ $execute {
 #endif
 }
 
+struct Module {
+    HMODULE base;
+    std::string name;
+};
+
+static std::optional<Module> moduleFromAddr(void* addr) {
+    HMODULE h = nullptr;
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)addr, &h);
+    if (!h) return std::nullopt;
+
+    wchar_t buf[512];
+    if (!GetModuleFileNameW(h, buf, sizeof(buf) / sizeof(wchar_t))) {
+        return std::nullopt;
+    }
+
+    auto name = utils::string::wideToUtf8(buf);
+    return Module{h, std::move(name)};
+}
+
 void onMiError() {
     g_errors.fetch_add(1, std::memory_order::relaxed);
 
-    // for debugging
+    std::array<std::byte, 4096> buf;
+    std::pmr::monotonic_buffer_resource pool{buf.data(), buf.size()};
+    using stacktrace_custom = std::basic_stacktrace<std::pmr::polymorphic_allocator<std::stacktrace_entry>>;
+
+    for (auto& frame : stacktrace_custom::current(0, 32, &pool)) {
+        auto module = moduleFromAddr(frame.native_handle());
+        if (module) {
+            auto rva = (uintptr_t)frame.native_handle() - (uintptr_t)module->base;
+            log::debug(" - {} + 0x{:x} ({})", module->name, rva, frame.native_handle());
+        } else {
+            log::debug(" - {}", frame.native_handle());
+        }
+    }
+
+    // // for debugging
     // static bool reentrant = false;
 
     // if (!reentrant) {
