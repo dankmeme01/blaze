@@ -38,6 +38,9 @@ def main(build: Build):
     if debug:
         build.add_definition("BLAZE_DEBUG")
 
+    if config.platform.is_android():
+        build.link_libraries("EGL")
+
     # epic deps
     build.add_cpm_dep("ebiggers/libdeflate", "v1.25", options={
         "LIBDEFLATE_BUILD_SHARED_LIB": "OFF",

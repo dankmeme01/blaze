@@ -16,7 +16,7 @@ bool HookedLoadingLayer::init(bool refresh) {
 
     this->schedule(schedule_selector(HookedLoadingLayer::doLoad), 0.f);
 
-    // TODO: make inter frame transitions instant, remove the vsync delay etc. while in loadinglayer
+    LoadModule::get().onLoadingLayerInitPost();
 
     return true;
 }

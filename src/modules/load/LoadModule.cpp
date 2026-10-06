@@ -86,6 +86,11 @@ void LoadModule::onLoadingLayerInit() {
     }
 }
 
+void LoadModule::onLoadingLayerInitPost() {
+    // disable vsync so frame transitions are fast during loadinglayer
+    this->disableVsync();
+}
+
 void LoadModule::onLoadStart() {
     m_loadStartTime = asp::Instant::now();
 
@@ -126,6 +131,7 @@ void LoadModule::onLoadStart() {
 
 void LoadModule::onLoadFinished() {
     m_loadFinishTime = asp::Instant::now();
+    this->restoreVsync();
 }
 
 void LoadModule::onMenuLayer() {

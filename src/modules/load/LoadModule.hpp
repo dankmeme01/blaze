@@ -11,6 +11,7 @@ public:
 
     void onEntry();
     void onLoadingLayerInit();
+    void onLoadingLayerInitPost();
     void onLoadStart();
     void onLoadFinished();
     void onMenuLayer();
@@ -18,6 +19,9 @@ public:
     void loadModResourcesBlocking(std::vector<geode::Mod*> mods);
 
     size_t runningTasks() const;
+
+    void disableVsync();
+    void restoreVsync();
 
 private:
     asp::Instant m_processStartTime;
