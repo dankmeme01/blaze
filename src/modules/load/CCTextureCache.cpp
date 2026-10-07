@@ -8,12 +8,7 @@ namespace blaze {
 
 struct HookedTextureCache : Modify<HookedTextureCache, CCTextureCache> {
     static void onModify(auto& self) {
-        LoadModule::get().addHooks(
-            self
-#ifdef BLAZE_DEBUG
-            ,"cocos2d::CCTextureCache::addImage"
-#endif
-        );
+        LoadModule::get().addHooks(self);
     }
 
 #ifdef BLAZE_DEBUG

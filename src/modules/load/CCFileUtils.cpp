@@ -10,11 +10,7 @@ namespace blaze {
 
 struct HookedCCFileUtils : Modify<HookedCCFileUtils, CCFileUtils> {
     static void onModify(auto& self) {
-        LoadModule::get().addHooks(
-            self,
-            "cocos2d::CCFileUtils::fullPathForFilename",
-            "cocos2d::CCFileUtils::getFileData"
-        );
+        LoadModule::get().addHooks(self);
 
         (void) self.setHookPriority("cocos2d::CCFileUtils::fullPathForFilename", Priority::Replace);
     }

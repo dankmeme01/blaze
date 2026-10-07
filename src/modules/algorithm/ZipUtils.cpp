@@ -12,14 +12,7 @@ namespace blaze {
 
 class $modify(ZipUtils) {
     static void onModify(auto& self) {
-        AlgorithmModule::get().addHooks(self,
-            "cocos2d::ZipUtils::ccDeflateMemory",
-            "cocos2d::ZipUtils::ccInflateMemory",
-            "cocos2d::ZipUtils::ccInflateMemoryWithHint",
-            "cocos2d::ZipUtils::compressString",
-            "cocos2d::ZipUtils::decompressString",
-            "cocos2d::ZipUtils::decompressString2"
-        );
+        AlgorithmModule::get().addHooks(self);
     }
 
     $override

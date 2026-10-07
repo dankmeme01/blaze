@@ -21,13 +21,7 @@ struct Module {
 
     void addHooks(auto& modify) {
         for (auto& [k, hook] : modify.m_hooks) {
-            auto res = modify.getHook(k);
-            if (!res) {
-                auto n = arc::getTypename<Derived>();
-                geode::log::warn("Missing hook: {} for {}", k, std::string_view{n.first, n.second});
-            } else {
-                m_hooks.push_back(res);
-            }
+            m_hooks.push_back(hook.get());
         }
     }
 
