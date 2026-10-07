@@ -8,10 +8,7 @@ namespace blaze {
 
 class $modify(CCApplication) {
     static void onModify(auto& self) {
-        LoadModule::get().addHooks(
-            self,
-            "cocos2d::CCApplication::run"
-        );
+        LoadModule::get().addHooks(self);
 
         (void) self.setHookPriority("cocos2d::CCApplication::run", Priority::First);
     }

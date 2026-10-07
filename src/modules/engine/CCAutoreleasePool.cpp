@@ -64,14 +64,7 @@ class $modify(CCPoolManagerHook, CCPoolManager) {
     inline static std::optional<Pool> s_cachedPool;
 
     static void onModify(auto& self) {
-        EngineModule::get().addHooks(
-            self,
-            "cocos2d::CCPoolManager::addObject",
-            "cocos2d::CCPoolManager::removeObject",
-            "cocos2d::CCPoolManager::push",
-            "cocos2d::CCPoolManager::pop",
-            "cocos2d::CCPoolManager::finalize"
-        );
+        EngineModule::get().addHooks(self);
 
         (void) self.setHookPriority("cocos2d::CCPoolManager::addObject", Priority::Replace * 1000);
         (void) self.setHookPriority("cocos2d::CCPoolManager::removeObject", Priority::Replace * 1000);
@@ -156,7 +149,7 @@ class $modify(CCPoolManagerHook, CCPoolManager) {
 // This is a micro optimization because Alpha's Geode Utils already hooks autorelease, so we avoid having 2 separate hooks in the path
 class $modify(CCAutoreleaseObjectHook, CCObject) {
     static void onModify(auto& self) {
-        EngineModule::get().addHooks(self, "cocos2d::CCObject::autorelease");
+        EngineModule::get().addHooks(self);
 
         (void) self.setHookPriority("cocos2d::CCObject::autorelease", Priority::Replace * 1000);
     }

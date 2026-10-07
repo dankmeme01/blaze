@@ -14,11 +14,7 @@ struct HookedLoadingLayer : geode::Modify<HookedLoadingLayer, LoadingLayer> {
     };
 
     static void onModify(auto& self) {
-        LoadModule::get().addHooks(
-            self,
-            "LoadingLayer::init",
-            "LoadingLayer::loadAssets"
-        );
+        LoadModule::get().addHooks(self);
 
         (void) self.setHookPriority("LoadingLayer::loadAssets", geode::Priority::Replace * 10);
         (void) self.setHookPriority("LoadingLayer::init", geode::Priority::Early);

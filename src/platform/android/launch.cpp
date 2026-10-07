@@ -9,10 +9,7 @@ namespace blaze {
 
 class $modify(AppDelegate) {
     static void onModify(auto& self) {
-        LoadModule::get().addHooks(
-            self,
-            "AppDelegate::applicationDidFinishLaunching"
-        );
+        LoadModule::get().addHooks(self);
 
         (void) self.setHookPriority("AppDelegate::applicationDidFinishLaunching", Priority::First);
     }

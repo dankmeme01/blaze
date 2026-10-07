@@ -19,13 +19,16 @@ struct Module {
         return instance;
     }
 
-    template <typename... HookNames>
-    void addHooks(auto& modify, HookNames... names) {
-        (addHookHelper(modify, names), ...);
-    }
-
-    void addHook(geode::Hook* hook) {
-        m_hooks.push_back(hook);
+    void addHooks(auto& modify) {
+        for (auto& [k, hook] : modify.m_hooks) {
+            auto res = modify.getHook(k);
+            if (!res) {
+                auto n = arc::getTypename<Derived>();
+                geode::log::warn("Missing hook: {} for {}", k, std::string_view{n.first, n.second});
+            } else {
+                m_hooks.push_back(res);
+            }
+        }
     }
 
 private:
@@ -37,16 +40,6 @@ private:
     static inline auto s_autoInitRef = &Module::s_autoInit;
 
     std::vector<geode::Hook*> m_hooks;
-
-    void addHookHelper(auto& modify, auto hookName) {
-        auto res = modify.getHook(hookName);
-        if (!res) {
-            auto n = arc::getTypename<Derived>();
-            geode::log::warn("Missing hook: {} for {}", hookName, std::string_view{n.first, n.second});
-        } else {
-            this->addHook(res.unwrap());
-        }
-    }
 };
 
 }

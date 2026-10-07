@@ -8,7 +8,7 @@ namespace blaze {
 
 class $modify(AppDelegate) {
     static void onModify(auto& self) {
-        SaveModule::get().addHooks(self, "AppDelegate::trySaveGame");
+        SaveModule::get().addHooks(self);
 
         (void) self.setHookPriority("AppDelegate::trySaveGame", Priority::Replace * 10);
     }

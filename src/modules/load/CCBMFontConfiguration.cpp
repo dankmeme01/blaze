@@ -21,7 +21,7 @@ struct HookedCCBMFontConfig : Modify<HookedCCBMFontConfig, CCBMFontConfiguration
             "cocos2d::CCBMFontConfiguration::initWithFNTfile";
 #endif
 
-        LoadModule::get().addHooks(self, fname);
+        LoadModule::get().addHooks(self);
         (void) self.setHookPriority(fname, Priority::Replace);
     }
 
