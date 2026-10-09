@@ -21,6 +21,7 @@ def main(build: Build):
     # build.add_include_dir("include")
     build.add_source_dir("src/*.cpp", recursive=False)
     build.add_source_dir("src/modules/*.cpp", recursive=True)
+    build.add_source_dir("src/benchmarks/*.cpp", recursive=True)
     build.add_source_dir("src/util/*.cpp", recursive=True)
     build.add_source_dir(f"src/platform/{config.platform.platform_str(False)}/")
 
@@ -75,6 +76,5 @@ def main(build: Build):
         mi_opts["MI_GUARDED"] = "ON"
 
     build.add_cpm_dep("microsoft/mimalloc", "v3.5.3", options=mi_opts, link_name="mimalloc-static")
-
-    # build.add_cpm_dep("martinus/unordered_dense", "v5.3.0", link_name="unordered_dense::unordered_dense")
+    build.add_cpm_dep("greg7mdp/gtl", "v1.2.0", link_name="gtl", options={})
 

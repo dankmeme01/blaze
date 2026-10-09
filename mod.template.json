@@ -12,5 +12,18 @@
 	"developer": "dankmeme",
 	"early-load": true,
 	"description": "",
-	"dependencies": {}
+	"dependencies": {},
+	"settings": {
+		"directory-snapshotting": {
+			"type": "bool",
+			"default": false,
+			"name": "Directory Snapshots",
+			"description": "Snapshots files available in the game directory and other search paths for blazing fast exist checks. This means files being added/deleted may not be detected until textures are reloaded."
+		}
+	},
+	"resources": {
+		"sprites": [
+			"resources/*.png"
+		]
+	}
 }
