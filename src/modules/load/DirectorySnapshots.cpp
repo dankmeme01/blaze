@@ -78,7 +78,7 @@ static Result<DirSnapshot> makeSnapshotFor(std::string_view dir) {
         auto code = GetLastError();
         // non-existing directory counts as empty directory for our intents and purposes
         if (code == ERROR_FILE_NOT_FOUND || code == ERROR_PATH_NOT_FOUND) {
-            BLAZE_TRACE("Snapshotted non-existing directory {} in {}", dir, start.elapsed());
+            BLAZE_TRACE_NOISY("Snapshotted non-existing directory {} in {}", dir, start.elapsed());
             return Ok(DirSnapshot{});
         }
 
