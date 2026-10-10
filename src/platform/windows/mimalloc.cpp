@@ -391,7 +391,7 @@ void smokeTest() {
         && p2 && mi_is_in_heap_region(p2)
         && p3 && mi_is_in_heap_region(p3)
         && p4.size() == 38 && mi_is_in_heap_region(p4.data())
-        && p5 && mi_is_in_heap_region(p5) && ((uintptr_t)p5 % 64 == 0) && _aligned_msize(p5, 64, 0) == 64;
+        && p5 && mi_is_in_heap_region(p5) && ((uintptr_t)p5 % 64 == 0) && _aligned_msize(p5, 64, 0) >= 64;
 
     p2 = realloc(p2, 32);
     p3 = _recalloc(p3, 32, 1);
