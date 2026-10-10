@@ -16,7 +16,7 @@
 	"settings": {
 		"directory-snapshotting": {
 			"type": "bool",
-			"default": false,
+			"default": true,
 			"name": "Directory Snapshots",
 			"description": "Snapshots files available in the game directory and other search paths for blazing fast exist checks. This means files being added/deleted may not be detected until textures are reloaded."
 		}

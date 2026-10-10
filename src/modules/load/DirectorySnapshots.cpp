@@ -49,8 +49,6 @@ static std::string normalizeDir(std::string_view dir) {
     return out;
 }
 
-// static bool fastExists(const std::wstring& path) {}
-
 static Result<DirSnapshot> makeSnapshotFor(std::string_view dir) {
     BLAZE_IF_DEBUG(auto start = asp::Instant::now());
 
