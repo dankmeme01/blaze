@@ -109,8 +109,8 @@ class $modify(BlazeGamePL, PlayLayer) {
                 }
             }
 
-            // auto obj = BlazeGameObject::fromValues(props, this, ldm);
-            auto obj = GameObject::objectFromVector(props.m_values, props.m_present, this, ldm);
+            auto obj = BlazeGameObject::fromValues(props, this, ldm);
+            // auto obj = GameObject::objectFromVector(props.m_values, props.m_present, this, ldm);
             if (obj) {
                 this->postBuildObjectSetup(obj, str, levelType);
             }
