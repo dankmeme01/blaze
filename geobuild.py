@@ -17,13 +17,21 @@ def main(build: Build):
     elif harden_alloc:
         mimalloc_harden_level = 1
 
+    enabled_modules = ["algorithm", "allocator", "audio", "engine", "game", "load", "save"]
+
+    # TODO: temp
+    enabled_modules.remove("game")
+    enabled_modules.remove("save")
+
     build.add_include_dir("src")
     # build.add_include_dir("include")
     build.add_source_dir("src/*.cpp", recursive=False)
-    build.add_source_dir("src/modules/*.cpp", recursive=True)
     build.add_source_dir("src/benchmarks/*.cpp", recursive=True)
     build.add_source_dir("src/util/*.cpp", recursive=True)
     build.add_source_dir(f"src/platform/{config.platform.platform_str(False)}/")
+
+    for module in enabled_modules:
+        build.add_source_dir(f"src/modules/{module}/*.cpp", recursive=True)
 
     build.enable_mod_json_generation("mod.template.json")
     build.add_geode_dep("dankmeme.async-load-api", {

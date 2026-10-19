@@ -12,7 +12,7 @@ class $modify(MenuLayer) {
 
     bool init() {
         arc::spawnBlocking<void>([] {
-            GameModule::get().populdateSpriteFrames();
+            GameModule::get().populateSpriteFrames();
         });
 
         return MenuLayer::init();

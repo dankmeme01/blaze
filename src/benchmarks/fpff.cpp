@@ -1,4 +1,6 @@
 #include "Benchmarks.hpp"
+#include <asp/fs.hpp>
+#include <asp/iter.hpp>
 
 using namespace geode::prelude;
 
@@ -7,14 +9,18 @@ namespace blaze::bench {
 void fpff() {
     auto fu = CCFileUtils::get();
 
-    std::vector<std::string> testNames;
-    std::filesystem::directory_iterator it{dirs::getResourcesDir() / "icons"};
-    for (auto& ent : it) {
-        auto fileName = ent.path().filename().string();
-        if (fileName.contains("-hd") || fileName.contains("-uhd")) continue;
-        auto withoutDir = ent.path().native().substr(dirs::getResourcesDir().native().size() + 1);
-        testNames.push_back(utils::string::wideToUtf8(withoutDir));
-    }
+    std::vector<std::string> testNames = asp::fs::iterDir(dirs::getResourcesDir() / "icons").unwrap()
+        .filterMap([](auto entry) { return entry.ok(); })
+        .filterMap([](auto entry) -> std::optional<asp::fs::Path> {
+            auto fileName = entry.path.filename().value().string();
+            if (fileName.contains("-hd") || fileName.contains("-uhd")) return std::nullopt;
+
+            return entry.path;
+        })
+        .map([](auto path) {
+            return path.string().substr(dirs::getResourcesDir().string().size() + 1);
+        })
+        .collect();
 
     auto t1 = asp::Instant::now();
     for (int i = 0; i < 1024; i++) {

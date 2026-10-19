@@ -3,10 +3,15 @@
 #include <Geode/modify/CCPoolManager.hpp>
 #include <Geode/modify/CCObject.hpp>
 #include <util/assert.hpp>
+#include <util/macros.hpp>
 #include <Geode/utils/terminate.hpp>
 #include "EngineModule.hpp"
 
 using namespace geode::prelude;
+
+#ifdef BLAZE_DEBUG
+static std::optional<std::thread::id> g_mainThread;
+#endif
 
 namespace blaze {
 
@@ -75,6 +80,13 @@ class $modify(CCPoolManagerHook, CCPoolManager) {
 
     $override
     void addObject(CCObject* obj) {
+#ifdef BLAZE_DEBUG
+        if (g_mainThread && std::this_thread::get_id() != g_mainThread) {
+            log::warn("CCPoolManager::addObject called from non-main thread! ({} @ {})", obj, (void*)obj);
+            __debugbreak();
+        }
+#endif
+
         this->getPool().addObject(obj);
     }
 
@@ -91,6 +103,8 @@ class $modify(CCPoolManagerHook, CCPoolManager) {
     $override
     void pop() {
         if (s_stack.empty()) return;
+
+        BLAZE_IF_DEBUG(g_mainThread = std::this_thread::get_id());
 
         // upon popping place the Stack structure in the cache to reuse the memory of the umap
         s_stack.back().clear();

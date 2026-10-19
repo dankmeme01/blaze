@@ -5,6 +5,7 @@
 #include "xor.hpp"
 #include <Geode/modify/ZipUtils.hpp>
 #include <Geode/utils/base64.hpp>
+#include <asp/fs.hpp>
 
 using namespace geode::prelude;
 
@@ -16,8 +17,8 @@ class $modify(ZipUtils) {
     }
 
     $override
-    static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp) {
-        Compressor c{1};
+    static int ccDeflateMemory(unsigned char* input, unsigned int size, unsigned char** outp, int level) {
+        Compressor c{level};
         c.setMode(CompressionMode::Gzip);
         auto buf = c.compress(input, size);
 
@@ -47,8 +48,11 @@ class $modify(ZipUtils) {
     }
 
     $override
-    static gd::string compressString(gd::string const& data, bool encrypt, int key) {
-        Compressor c{1};
+    static std::string compressString(std::string const& data, bool encrypt, int key, int level) {
+        // TODO: decide maybe whether to override
+        level = 1;
+
+        Compressor c{level};
         c.setMode(CompressionMode::Gzip);
 
         auto buf = c.compress(data.data(), data.size());
@@ -60,7 +64,7 @@ class $modify(ZipUtils) {
         }
 
 #ifdef GEODE_IS_ANDROID
-        return gd::string{encoded.data(), encoded.size()};
+        return std::string{encoded.data(), encoded.size()};
 #else
         return encoded;
 #endif
@@ -73,7 +77,7 @@ class $modify(ZipUtils) {
     ///// string decompression /////
 
     $override
-    static gd::string decompressString(gd::string const& input, bool encrypted, int key) {
+    static std::string decompressString(std::string const& input, bool encrypted, int key) {
         if (input.empty()) return "";
 
         std::vector<uint8_t> rawData;
@@ -99,7 +103,7 @@ class $modify(ZipUtils) {
         if (result.isOk()) {
             // success!
 #ifdef GEODE_IS_ANDROID
-            return gd::string(std::move(result).unwrap());
+            return std::string(std::move(result).unwrap());
 #else
             return std::move(result).unwrap();
 #endif
@@ -112,7 +116,7 @@ class $modify(ZipUtils) {
     }
 
     $override
-    static gd::string decompressString2(unsigned char* data, bool encrypted, int size, int key) {
+    static std::string decompressString2(unsigned char* data, bool encrypted, int size, int key) {
         if (!data || size < 1) return "";
 
         if (encrypted) {
@@ -139,7 +143,7 @@ class $modify(ZipUtils) {
             auto retval = std::move(result.unwrap());
             // success!
 #ifdef GEODE_IS_ANDROID
-            return gd::string(retval);
+            return std::string(retval);
 #else
             return retval;
 #endif

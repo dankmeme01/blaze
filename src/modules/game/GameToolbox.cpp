@@ -15,7 +15,7 @@ class $modify(GameToolbox) {
         (void) self.setHookPriority("GameToolbox::hsvFromString", Priority::Replace * 100);
     }
 
-    static ccHSVValue hsvFromString(gd::string const& str, char const* delim) {
+    static ccHSVValue hsvFromString(std::string const& str, char const* delim) {
         // note: the game always passes 'a' as delim, we cannot use the actual param because windows optimizes it out
         std::string_view sv{str.c_str(), str.size()};
         return parseHsv(sv, 'a');

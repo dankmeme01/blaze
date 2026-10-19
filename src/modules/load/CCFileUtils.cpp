@@ -16,7 +16,7 @@ struct HookedCCFileUtils : Modify<HookedCCFileUtils, CCFileUtils> {
     }
 
     $override
-    gd::string fullPathForFilename(const char* filename, bool ignoreSuffix) {
+    std::string fullPathForFilename(const char* filename, bool ignoreSuffix) {
         return AsyncLoad::fullPathForFilename(filename, ignoreSuffix);
     }
 

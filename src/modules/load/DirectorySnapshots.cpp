@@ -144,7 +144,7 @@ $on_mod(Loaded) {
 
         // pre-fill a few asynchronously
         arc::spawnBlocking<void>([] {
-            auto resources = utils::string::pathToString(dirs::getResourcesDir());
+            auto resources = dirs::getResourcesDir().string();
             if (resources.back() == '\\' || resources.back() == '/') {
                 resources.pop_back();
             }

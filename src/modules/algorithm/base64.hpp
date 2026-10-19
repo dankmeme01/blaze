@@ -1,5 +1,6 @@
 #pragma once
 #include <Geode/utils/base64.hpp>
+#include <asp/iter.hpp>
 
 namespace blaze::base64 {
 

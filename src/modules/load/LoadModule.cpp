@@ -156,7 +156,7 @@ void LoadModule::loadModResourcesBlocking(std::vector<Mod*> mods) {
         if (!mod->isInternal()) {
             // geode.loader resource is stored somewhere else, which is already added anyway
             auto searchPathRoot = dirs::getModRuntimeDir() / mod->getID() / "resources";
-            CCFileUtils::get()->addSearchPath(utils::string::pathToString(searchPathRoot).c_str());
+            CCFileUtils::get()->addSearchPath(searchPathRoot.c_str());
         }
 
         // only thing needs previous setup is spritesheets

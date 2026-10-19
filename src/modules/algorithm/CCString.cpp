@@ -33,18 +33,13 @@ bool CCString_initHook(CCString* self, const char* format, va_list args) {
         va_end(tmplist);
 
         fmt::format_int f{value};
-        self->m_sString = gd::string(f.data(), f.size());
+        self->m_sString = f.str();
         return true;
     }
 
     // Note: this size excludes the null terminator
     int size = std::vsnprintf(nullptr, 0, format, args);
-
-#ifndef GEODE_IS_ANDROID
-    self->m_sString = gd::string(size, '\0');
-#else
-    self->m_sString = gd::string(std::string(size, '\0'));
-#endif
+    self->m_sString = std::string(size, '\0');
 
     std::vsnprintf(self->m_sString.data(), self->m_sString.size() + 1, format, args);
 

@@ -22,7 +22,7 @@ class $modify(AppDelegate) {
         bool shouldSave = m_saveTime == 0.0;
 
         if (!shouldSave) {
-            auto saveTime = asp::SystemTime::UNIX_EPOCH + *asp::Duration::fromSecsF32(m_saveTime);
+            auto saveTime = asp::SystemTime::UNIX_EPOCH + asp::Duration::fromSecsF32(m_saveTime);
             shouldSave = saveTime.elapsed() > asp::Duration::fromSecs(10);
         }
 
@@ -41,24 +41,24 @@ class $modify(AppDelegate) {
 
     void doSave() {
         // Original:
-        // GameManager::get()->save();
-        // LocalLevelManager::get()->save();
+        GameManager::get()->save();
+        LocalLevelManager::get()->save();
 
-        std::counting_semaphore<> sem{0};
+        // TODO: technically unsound due to autorelease
+        // std::counting_semaphore<> sem{0};
 
-        // TODO: arc bug, these are not executed in parallel rn
-        arc::spawnBlocking<void>([&] {
-            GameManager::get()->save();
-            sem.release();
-        });
+        // arc::spawnBlocking<void>([&] {
+        //     GameManager::get()->save();
+        //     sem.release();
+        // });
 
-        arc::spawnBlocking<void>([&] {
-            LocalLevelManager::get()->save();
-            sem.release();
-        });
+        // arc::spawnBlocking<void>([&] {
+        //     LocalLevelManager::get()->save();
+        //     sem.release();
+        // });
 
-        sem.acquire();
-        sem.acquire();
+        // sem.acquire();
+        // sem.acquire();
     }
 };
 
