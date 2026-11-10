@@ -24,7 +24,7 @@ void LoadModule::loadSheet(ZStringView name) {
     m_awaitingTasks += 1;
 
     auto& alm = ALManager::get();
-    alm.loadSpritesheet(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<> result) {
+    alm.loadSpritesheet(name, [this, name = std::string{name}, start = asp::Instant::now()](auto result) {
         m_awaitingTasks--;
 
         if (!result) {
@@ -171,7 +171,7 @@ void LoadModule::loadModResourcesBlocking(std::vector<Mod*> mods) {
             queued++;
             totalSheets++;
 
-            ALManager::get().loadSpritesheet(sheet, [&, start = asp::Instant::now()](Result<> result) {
+            ALManager::get().loadSpritesheet(sheet, [&, start = asp::Instant::now()](auto result) {
                 queued--;
 
                 if (!result) {

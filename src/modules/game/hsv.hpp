@@ -1,6 +1,7 @@
 #pragma once
 #include <Geode/utils/general.hpp>
 #include <cocos2d.h>
+#include <asp/iter.hpp>
 
 namespace blaze {
 

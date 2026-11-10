@@ -34,11 +34,7 @@ def main(build: Build):
         build.add_source_dir(f"src/modules/{module}/*.cpp", recursive=True)
 
     build.enable_mod_json_generation("mod.template.json")
-    build.add_geode_dep("dankmeme.async-load-api", {
-        "version": ">=v1.0.0",
-        "required": True,
-    })
-    build.add_include_dir(build.config.build_dir / "geode-deps" / "dankmeme.async-load-api" / "include")
+    build.add_geode_dep("dankmeme.async-load-api", ">=v1.0.0")
     build.relax_geode_requirement()
 
     if config.platform.is_apple():

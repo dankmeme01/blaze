@@ -42,7 +42,7 @@ bool initGameObject(GameObject* obj, CCSpriteFrame* frame) {
     obj->m_eObjType = cocos2d::CCObjectType::GameObject;
     if (!initGameObject<CCSprite>(obj, frame)) return false;
     obj->commonSetup();
-    obj->m_bUnkBool2 = true;
+    obj->m_bDisableScheduling = true;
     return true;
 }
 
@@ -50,7 +50,7 @@ template <>
 bool initGameObject(EffectGameObject* obj, CCSpriteFrame* frame) {
     if (!initGameObject<GameObject>(obj, frame)) return false; // technically inherits enhanced but needs nothing from it
 
-    obj->m_bUnkBool2 = false;
+    obj->m_bDisableScheduling = false;
     obj->m_classType = GameObjectClassType::Effect;
     obj->m_duration = 0.5f;
     obj->m_legacyHSV = true;
@@ -63,7 +63,7 @@ template <>
 bool initGameObject(EnhancedGameObject* obj, CCSpriteFrame* frame) {
     if (!initGameObject<GameObject>(obj, frame)) return false;
 
-    obj->m_bUnkBool2 = false;
+    obj->m_bDisableScheduling = false;
     obj->m_classType = GameObjectClassType::Enhanced;
     return true;
 }
@@ -123,7 +123,7 @@ template <>
 bool initGameObject(LabelGameObject* obj, CCSpriteFrame* frame) {
     if (!initGameObject<GameObject>(obj, frame)) return false; // TODO: verify frame = "edit_eCounterBtn_001.png"
 
-    obj->m_bUnkBool2 = false;
+    obj->m_bDisableScheduling = false;
 
     return true;
 }

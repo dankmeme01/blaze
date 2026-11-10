@@ -48,7 +48,7 @@ class $modify(ZipUtils) {
     }
 
     $override
-    static std::string compressString(std::string const& data, bool encrypt, int key, int level) {
+    static std::string compressString(std::string const& data, bool encrypt, int level, int key) {
         // TODO: decide maybe whether to override
         level = 1;
 
@@ -63,11 +63,7 @@ class $modify(ZipUtils) {
             encryptDecryptImpl(encoded.data(), encoded.size(), key);
         }
 
-#ifdef GEODE_IS_ANDROID
-        return std::string{encoded.data(), encoded.size()};
-#else
         return encoded;
-#endif
     }
 
     static void encryptDecryptImpl(void* data, size_t size, int key) {
@@ -102,11 +98,7 @@ class $modify(ZipUtils) {
 
         if (result.isOk()) {
             // success!
-#ifdef GEODE_IS_ANDROID
-            return std::string(std::move(result).unwrap());
-#else
             return std::move(result).unwrap();
-#endif
         }
 
         log::warn("decompressString fail 2: {}", result.unwrapErr());
@@ -142,11 +134,7 @@ class $modify(ZipUtils) {
         if (result.isOk()) {
             auto retval = std::move(result.unwrap());
             // success!
-#ifdef GEODE_IS_ANDROID
-            return std::string(retval);
-#else
             return retval;
-#endif
         }
 
         log::warn("decompressString2 fail 2: {}", result.unwrapErr());

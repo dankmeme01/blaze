@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #include <modules/allocator/AllocatorModule.hpp>
 #include <mimalloc.h>
 #include <stacktrace>
@@ -410,3 +412,5 @@ void smokeTest() {
         log::error("Allocator hooks smoke test failed! Error count: {}", errors);
     }
 }
+
+#endif
