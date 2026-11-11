@@ -258,7 +258,7 @@ void LoadModule::populateFpffCache() {
         auto result = AsyncLoad::fullPathForFilename(path);
 
 #ifdef BLAZE_DEBUG
-        if (!asp::fs::exists(result)) {
+        if (!AsyncLoad::fileExists(result)) {
             log::warn("FPFF cache tried loading non-existing file: {}", result);
         }
 #endif

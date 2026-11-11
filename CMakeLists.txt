@@ -19,5 +19,5 @@ endif()
 set(GEODE_ASP_VERSION "@1.6.2")
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
-CPMAddPackage("gh:dankmeme01/geobuild#e23beaf")
+CPMAddPackage("gh:dankmeme01/geobuild#v2")
 include("${CMAKE_CURRENT_BINARY_DIR}/geobuild-gen.cmake")

@@ -53,7 +53,9 @@ static geode::Result<DirSnapshot> makeSnapshotFor(PathView dir) {
 
     DirSnapshot snap;
 
-    auto res = asp::fs::DirectoryIterator::create(dir);
+    auto res = asp::fs::DirectoryIterator::create(dir, {
+        .m_largeBuffer = true,
+    });
     if (!res && res.unwrapErr() == asp::fs::ErrorKind::NotFound) {
         return Ok(std::move(snap));
     }
