@@ -83,7 +83,7 @@ class $modify(CCPoolManagerHook, CCPoolManager) {
 #ifdef BLAZE_DEBUG
         if (g_mainThread && std::this_thread::get_id() != g_mainThread) {
             log::warn("CCPoolManager::addObject called from non-main thread! ({} @ {})", obj, (void*)obj);
-            __debugbreak();
+            __builtin_debugtrap();
         }
 #endif
 

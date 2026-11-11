@@ -5,6 +5,7 @@ if TYPE_CHECKING:
 def main(build: Build):
     config = build.config
     debug = build.add_option("BLAZE_DEBUG", False, "Enable debug mode for blaze")
+    install = build.add_option("BLAZE_INSTALL", False, "Install mod after building for Android")
     harden_alloc = build.add_option("BLAZE_HARDEN_ALLOC", False, "Enable harden mode for mimalloc, reducing performance by a few % to detect memory errors")
     debug_alloc = build.add_option("BLAZE_DEBUG_ALLOC", False, "Enable debug mode for mimalloc, makes the allocator very slow")
     guard_alloc = build.add_option("BLAZE_GUARD_ALLOC", False, "Enable guarded allocations in mimalloc, makes the allocator abysmally slow but best for catching memory errors")
@@ -46,6 +47,10 @@ def main(build: Build):
     if config.platform.is_android():
         build.link_libraries("EGL")
 
+    # enable post build hook if install is enabled
+    if install:
+        build.enable_hooks()
+
     # epic deps
     build.add_cpm_dep("ebiggers/libdeflate", "v1.25", options={
         "LIBDEFLATE_BUILD_SHARED_LIB": "OFF",
@@ -82,3 +87,8 @@ def main(build: Build):
     build.add_cpm_dep("microsoft/mimalloc", "v3.5.3", options=mi_opts, link_name="mimalloc-static")
     build.add_cpm_dep("greg7mdp/gtl", "v1.2.0", link_name="gtl", options={})
 
+
+def post_build(ctx: HookContext):
+    if ctx.platform.is_android() and adb.is_device_connected():
+        adb.install(ctx.build_dir / "dankmeme.blaze.geode")
+        adb.launch_game()

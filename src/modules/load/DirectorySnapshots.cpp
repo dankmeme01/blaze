@@ -1,30 +1,30 @@
 #include <Geode/Geode.hpp>
 
-#ifdef GEODE_IS_WINDOWS
-
 #include <AsyncLoad/FileUtils.hpp>
 #include <asp/sync/Mutex.hpp>
+#include <asp/fs/DirectoryIterator.hpp>
 #include <gtl/phmap.hpp>
 #include <util/macros.hpp>
 
 using namespace geode::prelude;
+using namespace asp::fs;
 using namespace AsyncLoad;
 
 struct DirSnapshot {
-    gtl::flat_hash_set<std::string> files;
+    gtl::flat_hash_set<Path> files;
 
-    bool contains(std::string_view file) const {
+    bool contains(PathView file) const {
         return this->files.contains(file);
     }
 
-    void add(std::string file) {
+    void add(Path file) {
         this->files.emplace(std::move(file));
     }
 };
 
-static asp::Mutex<gtl::flat_hash_map<std::string, DirSnapshot>> g_dirs;
+static asp::Mutex<gtl::flat_hash_map<Path, DirSnapshot>> g_dirs;
 
-static std::pair<std::string_view, std::string_view> splitPath(std::string_view path) {
+static std::pair<PathView, PathView> splitPath(std::string_view path) {
     auto slash = path.find_last_of("/\\");
     if (slash == std::string_view::npos) {
         return { "", path };
@@ -32,83 +32,61 @@ static std::pair<std::string_view, std::string_view> splitPath(std::string_view 
     return { path.substr(0, slash), path.substr(slash + 1) };
 }
 
-static std::string normalizeFile(std::string_view file) {
+static Path normalizeFile(PathView file) {
     std::string out{file};
     utils::string::toLowerIP(out);
     return out;
 }
 
-static std::string normalizeDir(std::string_view dir) {
-    std::string out{dir};
-    utils::string::toLowerIP(out);
+static Path normalizeDir(PathView dir) {
+    std::string str{dir};
+    utils::string::toLowerIP(str);
 
-    for (auto& c : out) {
-        if (c == '/') c = '\\';
-    }
+    Path out{str};
+    out.makePreferred();
 
     return out;
 }
 
-static Result<DirSnapshot> makeSnapshotFor(std::string_view dir) {
+static geode::Result<DirSnapshot> makeSnapshotFor(PathView dir) {
     BLAZE_IF_DEBUG(auto start = asp::Instant::now());
 
-    // why yes
-    utils::StringBuffer<> buf;
-    buf.append(dir);
-    buf.append("\\*");
+    DirSnapshot snap;
 
-    auto wideRes = utils::string::utf8ToUtf16(buf.view());
-    if (!wideRes) {
-        return Err("utf-8 -> utf-16 conversion failed for '{}': {}", buf.view(), wideRes.unwrapErr());
+    auto res = asp::fs::DirectoryIterator::create(dir);
+    if (!res && res.unwrapErr() == asp::fs::ErrorKind::NotFound) {
+        return Ok(std::move(snap));
     }
 
-    auto wide = std::move(wideRes).unwrap();
-
-    WIN32_FIND_DATAW data{};
-    auto hfind = FindFirstFileExW(
-        (wchar_t*)wide.c_str(),
-        FindExInfoBasic,
-        &data,
-        FindExSearchNameMatch,
-        nullptr,
-        FIND_FIRST_EX_LARGE_FETCH
-    );
-
-    if (hfind == INVALID_HANDLE_VALUE) {
-        auto code = GetLastError();
-        // non-existing directory counts as empty directory for our intents and purposes
-        if (code == ERROR_FILE_NOT_FOUND || code == ERROR_PATH_NOT_FOUND) {
-            BLAZE_TRACE_NOISY("Snapshotted non-existing directory {} in {}", dir, start.elapsed());
-            return Ok(DirSnapshot{});
+    auto iterator = GEODE_UNWRAP(std::move(res));
+    for (auto r : iterator) {
+        if (!r) {
+            log::warn("error on entry inside '{}': {}", dir, r.unwrapErr());
+            continue;
         }
 
-        return Err("FindFirstFileExW failed: error {}", code);
-    }
-
-    DirSnapshot snap;
-    do {
-        std::wstring_view filename { data.cFileName };
-        if (filename == L"." || filename == L"..") continue;
+        auto& entry = r.unwrap();
 
         // filter out directories
-        if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        if (entry.isDir()) continue;
 
-        std::u16string_view utf16View{(const char16_t*)filename.data(), filename.size()};
-        auto res = utils::string::utf16ToUtf8(utf16View);
-        if (!res) {
-            return Err("utf-16 -> utf-8 conversion failed for a file inside '{}': {}", dir, res.unwrapErr());
-        }
-
-        snap.add(std::move(res).unwrap());
-    } while (FindNextFileW(hfind, &data));
-
-    FindClose(hfind);
+        // strip away the base
+        auto filename  = entry.path.filename().value();
+        snap.add(Path{filename});
+    }
 
     BLAZE_TRACE("Snapshotted directory {} in {} ({} files)", dir, start.elapsed(), snap.files.size());
     return Ok(std::move(snap));
 }
 
 bool exists(ZStringView path) {
+#ifdef GEODE_IS_ANDROID
+    // this optimization is a bit pointless for AAsset paths, so don't do dir snapshots if it's an apk asset
+    if (!path.view().starts_with('/')) {
+        return AsyncLoad::impl::fileExists(path);
+    }
+#endif
+
     auto [dirBare, file] = splitPath(path);
 
     auto dir = normalizeDir(dirBare);
@@ -158,5 +136,3 @@ $on_mod(Loaded) {
         });
     }
 }
-
-#endif
