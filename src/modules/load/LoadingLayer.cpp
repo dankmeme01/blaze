@@ -1,4 +1,5 @@
 #include "LoadingLayer.hpp"
+#include <util/assert.hpp>
 #include <AsyncLoad/FileUtils.hpp>
 
 using namespace geode::prelude;
@@ -6,7 +7,7 @@ using namespace geode::prelude;
 namespace blaze {
 
 bool HookedLoadingLayer::init(bool refresh) {
-    LoadModule::get().onLoadingLayerInit();
+    LoadModule::get().onLoadingLayerInit(refresh);
 
     if (!LoadingLayer::init(refresh)) return false;
 
@@ -25,9 +26,8 @@ void HookedLoadingLayer::doLoad(float dt) {
     auto& fields = *m_fields.self();
     auto& lm = LoadModule::get();
 
-    if (fields.m_start) {
-        lm.onLoadStart();
-        fields.m_start = false;
+    if (!fields.m_taskGroup && !fields.m_complete) {
+        fields.m_taskGroup = lm.onLoadStart();
 
         // Geode hooks loadAssets and thinks that no one else is calling it, so we should uphold that
         // call loadAssets once, and let Geode re-schedule it via qimt again and again until Geode is done doing its stuff
@@ -52,9 +52,8 @@ void HookedLoadingLayer::doLoad(float dt) {
 // ensuring that if a certain mod hooks this function expecting e.g. loadStep 10 to load its assets, it will continue working
 void HookedLoadingLayer::loadAssets() {
     auto& fields = *m_fields.self();
-    auto& lm = LoadModule::get();
 
-    bool busy = lm.runningTasks() > 0;
+    bool busy = fields.m_taskGroup && fields.m_taskGroup->pendingTasks() > 0;
 
     // if busy, do nothing but tell them to check on us again
     if (busy) {
@@ -69,9 +68,18 @@ void HookedLoadingLayer::loadAssets() {
     bool willReplaceScene = m_loadStep == 14;
     m_loadStep = std::clamp(m_loadStep + 1, 0, 14);
 
-    if (fields.m_prevBusy) {
-        fields.m_prevBusy = false;
-        lm.onLoadFinished();
+    if (fields.m_taskGroup) {
+        fields.m_taskGroup.reset();
+        fields.m_complete = true;
+
+        // this happens on step 9 and is a bit untypical so let's load it here on main thread
+        ObjectManager::instance()->setup();
+        auto ccm = CCContentManager::sharedManager();
+        ccm->addDict("glassDestroy01.plist", true);
+        ccm->addDict("coinPickupEffect.plist", true);
+        ccm->addDict("explodeEffect.plist", true);
+
+        LoadModule::get().onLoadFinished();
     }
 
     // replicate original menulayer sequence too

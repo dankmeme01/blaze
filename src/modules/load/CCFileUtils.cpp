@@ -34,7 +34,7 @@ struct HookedCCFileUtils : Modify<HookedCCFileUtils, CCFileUtils> {
 
         auto result = AsyncLoad::getFileDataOwned(pszFileName);
         if (!result) {
-            log::warn("getFileData({}) failed: {}", pszFileName, result.unwrapErr());
+            log::debug("getFileData({}) failed: {}", pszFileName, result.unwrapErr());
             return nullptr;
         }
 

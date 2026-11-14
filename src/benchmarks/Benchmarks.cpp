@@ -7,7 +7,7 @@
 using namespace geode::prelude;
 
 static void runBench() {
-    blaze::bench::fpff();
+    blaze::bench::textures();
 }
 
 class $modify(MenuLayer) {

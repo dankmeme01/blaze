@@ -3,5 +3,6 @@
 namespace blaze::bench {
 
 void fpff();
+void textures();
 
 }

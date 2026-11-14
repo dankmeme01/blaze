@@ -20,13 +20,9 @@ void LoadModule::onEntry() {
     // TODO: module disabled, do nothing?
 }
 
-void LoadModule::loadSheet(ZStringView name) {
-    m_awaitingTasks += 1;
-
+AsyncLoad::TaskHandle LoadModule::loadSheet(ZStringView name) {
     auto& alm = ALManager::get();
-    alm.loadSpritesheet(name, [this, name = std::string{name}, start = asp::Instant::now()](auto result) {
-        m_awaitingTasks--;
-
+    return alm.loadSpritesheet(name, [this, name = std::string{name}, start = asp::Instant::now()](auto result) {
         if (!result) {
             log::error("Failed to load spritesheet {}: {}", name, result.unwrapErr());
             return;
@@ -36,13 +32,13 @@ void LoadModule::loadSheet(ZStringView name) {
     });
 }
 
-void LoadModule::loadImage(ZStringView name) {
-    m_awaitingTasks += 1;
+void LoadModule::loadSheet(AsyncLoad::TaskGroup& group, ZStringView name) {
+    group.add(this->loadSheet(name));
+}
 
+AsyncLoad::TaskHandle LoadModule::loadImage(ZStringView name) {
     auto& alm = ALManager::get();
     auto handle = alm.loadTextureEager(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<Ref<CCTexture2D>> result) {
-        m_awaitingTasks--;
-
         if (!result) {
             log::error("Failed to load image {}: {}", name, result.unwrapErr());
             return;
@@ -51,39 +47,52 @@ void LoadModule::loadImage(ZStringView name) {
         log::debug("Loaded image {} in {}", name, start.elapsed());
     });
     handle.setName(fmt::format("Blaze Load {}", name));
+    return handle;
 }
 
-void LoadModule::loadFont(ZStringView name) {
+void LoadModule::loadImage(AsyncLoad::TaskGroup& group, ZStringView name) {
+    // loadImage uses loadTextureEager, that may complete immediately and return a null task handle
+    auto h = this->loadImage(name);
+    if (h) group.add(h);
+}
+
+AsyncLoad::TaskHandle LoadModule::loadFont(ZStringView name) {
     auto view = name.view();
     if (view.ends_with(".fnt")) {
         view.remove_suffix(4);
     }
 
-    this->loadImage(fmt::format("{}.png", view));
+    auto handle = this->loadImage(fmt::format("{}.png", view));
 
     // load font
     auto start = asp::Instant::now();
     FNTConfigLoadFile(fmt::format("{}.fnt", name).c_str());
     log::debug("Loaded font {} in {}", name, start.elapsed());
+
+    return handle;
 }
 
-void LoadModule::onLoadingLayerInit() {
+void LoadModule::loadFont(AsyncLoad::TaskGroup& group, ZStringView name) {
+    // loadFont calls loadImage which uses loadTextureEager, that may complete immediately and return a null task handle
+    auto h = this->loadFont(name);
+    if (h) group.add(h);
+}
+
+void LoadModule::onLoadingLayerInit(bool reload) {
     // search paths have been initialized, this is ok now
     arc::spawnBlocking<void>([&] {
         this->populateFpffCache();
     });
 
     // now load the resources required for loading layer
-    this->loadSheet("GJ_LaunchSheet");
-    this->loadImage("game_bg_01_001.png");
-    this->loadImage("slidergroove.png");
-    this->loadImage("sliderBar.png");
-    this->loadFont("goldFont");
+    TaskGroup group;
+    this->loadSheet(group, "GJ_LaunchSheet");
+    this->loadImage(group, "game_bg_01_001.png");
+    this->loadImage(group, "slidergroove.png");
+    this->loadImage(group, "sliderBar.png");
+    this->loadFont(group, "goldFont");
 
-    while (m_awaitingTasks > 0) {
-        ALManager::get().lendMainThread();
-        std::this_thread::yield();
-    }
+    group.wait();
 }
 
 void LoadModule::onLoadingLayerInitPost() {
@@ -91,42 +100,49 @@ void LoadModule::onLoadingLayerInitPost() {
     this->disableVsync();
 }
 
-void LoadModule::onLoadStart() {
+TaskGroup LoadModule::onLoadStart() {
     m_loadStartTime = asp::Instant::now();
 
-    this->loadSheet("GJ_GameSheet");
-    this->loadSheet("GJ_GameSheet02");
-    this->loadSheet("GJ_GameSheet03");
-    this->loadSheet("GJ_GameSheetEditor");
-    this->loadSheet("GJ_GameSheet04");
-    this->loadSheet("GJ_GameSheetGlow");
-    this->loadSheet("FireSheet_01");
-    this->loadSheet("GJ_ShopSheet");
-    this->loadSheet("GJ_ParticleSheet");
-    this->loadSheet("PixelSheet_01");
+    TaskGroup group;
+    this->loadSheet(group, "GJ_GameSheet");
+    this->loadSheet(group, "GJ_GameSheet02");
+    this->loadSheet(group, "GJ_GameSheet03");
+    this->loadSheet(group, "GJ_GameSheetEditor");
+    this->loadSheet(group, "GJ_GameSheet04");
+    this->loadSheet(group, "GJ_GameSheetGlow");
+    this->loadSheet(group, "FireSheet_01");
+    this->loadSheet(group, "GJ_ShopSheet");
+    this->loadSheet(group, "GJ_ParticleSheet");
+    this->loadSheet(group, "PixelSheet_01");
 
-    this->loadImage("smallDot.png");
-    this->loadImage("square02_001.png");
-    this->loadSheet("CCControlColourPickerSpriteSheet");
+    this->loadImage(group, "smallDot.png");
+    this->loadImage(group, "square02_001.png");
+    this->loadSheet(group, "CCControlColourPickerSpriteSheet");
 
-    this->loadImage("GJ_gradientBG.png");
-    this->loadImage("edit_barBG_001.png");
-    this->loadImage("GJ_button_01.png");
-    this->loadImage("slidergroove2.png");
+    this->loadImage(group, "GJ_gradientBG.png");
+    this->loadImage(group, "edit_barBG_001.png");
+    this->loadImage(group, "GJ_button_01.png");
+    this->loadImage(group, "slidergroove2.png");
 
-    this->loadImage("GJ_square01.png");
-    this->loadImage("GJ_square02.png");
-    this->loadImage("GJ_square03.png");
-    this->loadImage("GJ_square04.png");
-    this->loadImage("GJ_square05.png");
-    this->loadImage("gravityLine_001.png");
+    this->loadImage(group, "GJ_square01.png");
+    this->loadImage(group, "GJ_square02.png");
+    this->loadImage(group, "GJ_square03.png");
+    this->loadImage(group, "GJ_square04.png");
+    this->loadImage(group, "GJ_square05.png");
+    this->loadImage(group, "gravityLine_001.png");
 
-    this->loadFont("bigFont");
-    this->loadFont("chatFont");
+    this->loadFont(group, "bigFont");
+    this->loadFont(group, "chatFont");
+
+    this->loadSheet(group, "Robot_AnimDesc");
 
     // GD doesn't load the ones below on LoadingLayer, but they are quickly used in MenuLayer
-    this->loadImage("groundSquare_01_001.png");
-    this->loadImage("square.png");
+    this->loadImage(group, "groundSquare_01_001.png");
+    this->loadImage(group, "square.png");
+
+    group.close();
+
+    return group;
 }
 
 void LoadModule::onLoadFinished() {
@@ -147,15 +163,15 @@ void LoadModule::onMenuLayer() {
 void LoadModule::loadModResourcesBlocking(std::vector<Mod*> mods) {
     auto start = asp::Instant::now();
 
-    size_t queued = 0;
-    size_t totalSheets = 0;
+    TaskGroup group;
 
     for (auto mod : mods) {
         if (!mod->isOrWillBeEnabled()) continue;
 
+        auto searchPathRoot = dirs::getModRuntimeDir() / mod->getID() / "resources";
+
+        // geode.loader resource is stored somewhere else, which is already added anyway
         if (!mod->isInternal()) {
-            // geode.loader resource is stored somewhere else, which is already added anyway
-            auto searchPathRoot = dirs::getModRuntimeDir() / mod->getID() / "resources";
             CCFileUtils::get()->addSearchPath(searchPathRoot.c_str());
         }
 
@@ -163,37 +179,33 @@ void LoadModule::loadModResourcesBlocking(std::vector<Mod*> mods) {
         auto& sheets = mod->getMetadata().getSpritesheets();
         if (sheets.empty()) continue;
 
+        // quick existence check to skip processing the mod
+        // this may not exist if the mod hadn't been unzipped (e.g. outdated gd version)
+        if (!mod->isInternal() && !searchPathRoot.exists()) {
+            log::debug("Skipping mod {}, no resource directory", mod->getID());
+            continue;
+        }
+
         log::debug("{}", mod->getID());
         log::NestScope nest;
 
         for (auto& sheet : sheets) {
             log::debug("Enqueue sheet {}", sheet);
-            queued++;
-            totalSheets++;
 
-            ALManager::get().loadSpritesheet(sheet, [&, start = asp::Instant::now()](auto result) {
-                queued--;
-
+            group.add(ALManager::get().loadSpritesheet(sheet, [&, start = asp::Instant::now()](auto result) {
                 if (!result) {
-                    log::error("Failed to load spritesheet {}: {}", sheet, result.unwrapErr());
+                    log::error("Failed to load mod spritesheet {}: {}", sheet, result.unwrapErr());
                     return;
                 }
 
                 log::debug("Loaded spritesheet {} in {}", sheet, start.elapsed());
-            });
+            }));
         }
     }
 
-    while (queued > 0) {
-        ALManager::get().lendMainThread();
-        std::this_thread::sleep_for(std::chrono::milliseconds(3));
-    }
+    group.wait();
 
-    log::info("Took {} to load all mod resources ({} mods, {} sheets)", start.elapsed(), mods.size(), totalSheets);
-}
-
-size_t LoadModule::runningTasks() const {
-    return m_awaitingTasks;
+    log::info("Took {} to load all mod resources ({} mods, {} sheets)", start.elapsed(), mods.size(), group.totalTasks());
 }
 
 void LoadModule::populateFpffCache() {
@@ -273,7 +285,6 @@ $on_game(Loaded) {
 
 $on_mod(Loaded) {
     LoaderUpdateModResourcesEvent().listen([](std::vector<Mod*> mods) {
-        log::debug("Receive blaze");
         LoadModule::get().loadModResourcesBlocking(std::move(mods));
         return ListenerResult::Stop;
     }, Priority::Stub).leak();

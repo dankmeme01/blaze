@@ -38,7 +38,6 @@ template <>
 bool initGameObject(GameObject* obj, CCSpriteFrame* frame) {
     if (!frame) return false;
 
-    // TODO: init is not safe for multithread due to setTexture
     obj->m_eObjType = cocos2d::CCObjectType::GameObject;
     if (!initGameObject<CCSprite>(obj, frame)) return false;
     obj->commonSetup();

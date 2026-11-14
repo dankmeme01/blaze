@@ -8,8 +8,8 @@ namespace blaze {
 
 struct HookedLoadingLayer : geode::Modify<HookedLoadingLayer, LoadingLayer> {
     struct Fields {
-        bool m_start = true;
-        bool m_prevBusy = true;
+        std::optional<AsyncLoad::TaskGroup> m_taskGroup;
+        bool m_complete = false;
         bool m_shouldAdvanceLoadStep = false;
     };
 

@@ -10,15 +10,13 @@ public:
     LoadModule();
 
     void onEntry();
-    void onLoadingLayerInit();
+    void onLoadingLayerInit(bool reload);
     void onLoadingLayerInitPost();
-    void onLoadStart();
+    AsyncLoad::TaskGroup onLoadStart();
     void onLoadFinished();
     void onMenuLayer();
 
     void loadModResourcesBlocking(std::vector<geode::Mod*> mods);
-
-    size_t runningTasks() const;
 
     void disableVsync();
     void restoreVsync();
@@ -29,12 +27,17 @@ private:
     asp::Instant m_loadStartTime;
     asp::Instant m_loadFinishTime;
     asp::Instant m_menuLayerTime;
-    size_t m_awaitingTasks = 0;
 
     void populateFpffCache();
-    void loadImage(geode::ZStringView name);
-    void loadSheet(geode::ZStringView name);
-    void loadFont(geode::ZStringView name);
+
+    [[nodiscard]] AsyncLoad::TaskHandle loadImage(geode::ZStringView name);
+    void loadImage(AsyncLoad::TaskGroup& group, geode::ZStringView name);
+
+    [[nodiscard]] AsyncLoad::TaskHandle loadSheet(geode::ZStringView name);
+    void loadSheet(AsyncLoad::TaskGroup& group, geode::ZStringView name);
+
+    [[nodiscard]] AsyncLoad::TaskHandle loadFont(geode::ZStringView name);
+    void loadFont(AsyncLoad::TaskGroup& group, geode::ZStringView name);
 };
 
 }
