@@ -21,7 +21,7 @@ void textures() {
         auto path = AsyncLoad::fullPathForFilename(n);
         CCTextureCache::get()->removeTextureForKey(path.c_str());
 
-        group.add(AsyncLoad::ALManager::get().loadTexture(path, [n](auto res) {}, true));
+        group.add(AsyncLoad::loadTexture(path, [n](auto res) {}, true));
     }
 
     group.wait();

@@ -21,8 +21,7 @@ void LoadModule::onEntry() {
 }
 
 AsyncLoad::TaskHandle LoadModule::loadSheet(ZStringView name) {
-    auto& alm = ALManager::get();
-    return alm.loadSpritesheet(name, [this, name = std::string{name}, start = asp::Instant::now()](auto result) {
+    return AsyncLoad::loadSpritesheet(name, [this, name = std::string{name}, start = asp::Instant::now()](auto result) {
         if (!result) {
             log::error("Failed to load spritesheet {}: {}", name, result.unwrapErr());
             return;
@@ -37,8 +36,7 @@ void LoadModule::loadSheet(AsyncLoad::TaskGroup& group, ZStringView name) {
 }
 
 AsyncLoad::TaskHandle LoadModule::loadImage(ZStringView name) {
-    auto& alm = ALManager::get();
-    auto handle = alm.loadTextureEager(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<Ref<CCTexture2D>> result) {
+    auto handle = AsyncLoad::loadTextureEager(name, [this, name = std::string{name}, start = asp::Instant::now()](Result<Ref<CCTexture2D>> result) {
         if (!result) {
             log::error("Failed to load image {}: {}", name, result.unwrapErr());
             return;
@@ -192,7 +190,7 @@ void LoadModule::loadModResourcesBlocking(std::vector<Mod*> mods) {
         for (auto& sheet : sheets) {
             log::debug("Enqueue sheet {}", sheet);
 
-            group.add(ALManager::get().loadSpritesheet(sheet, [&, start = asp::Instant::now()](auto result) {
+            group.add(AsyncLoad::loadSpritesheet(sheet, [&, start = asp::Instant::now()](auto result) {
                 if (!result) {
                     log::error("Failed to load mod spritesheet {}: {}", sheet, result.unwrapErr());
                     return;
