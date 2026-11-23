@@ -5,6 +5,7 @@
 #include <AsyncLoad/Fonts.hpp>
 #include <asp/fs.hpp>
 #include <platform/platform.hpp>
+#include <util/assert.hpp>
 
 using namespace geode::prelude;
 using namespace AsyncLoad;
@@ -13,11 +14,17 @@ namespace blaze {
 
 LoadModule::LoadModule() {}
 
+void LoadModule::onPreEntry() {
+    // start pre-loading gmanagers as soon as possible
+    this->enqueueDSDictionaryLoad("CCGameManager.dat");
+    this->enqueueDSDictionaryLoad("CCLocalLevels.dat");
+}
+
 void LoadModule::onEntry() {
+    // TODO: module disabled, do nothing?
+
     m_entryTime = asp::Instant::now();
     m_processStartTime = platform::getProcessStartTime();
-
-    // TODO: module disabled, do nothing?
 }
 
 AsyncLoad::TaskHandle LoadModule::loadSheet(ZStringView name) {
@@ -275,6 +282,76 @@ void LoadModule::populateFpffCache() {
     }
 
     log::debug("Pre-populated FPFF cache with {} entries", paths.size());
+}
+
+void LoadModule::enqueueDSDictionaryLoad(std::string_view filename) {
+    auto dicts = m_loadingDictionaries.lock();
+    auto pending = std::make_shared<LoadingDictionary>();
+    dicts->emplace(std::string{filename}, pending);
+
+    async::runtime().spawnBlocking<void>([this, name = std::string{filename}, pending] {
+        auto dict = this->doLoadDictionary(name);
+        log::debug("async load for {} finished, success: {}", name, dict != nullptr);
+
+        pending->dict = std::move(dict);
+        pending->sem.release(1'000'000'000);
+    });
+
+    log::debug("Enqueued load for dictionary {}", filename);
+}
+
+std::unique_ptr<DS_Dictionary> LoadModule::loadDSDictionarySync(ZStringView filename) {
+    auto dicts = m_loadingDictionaries.lock();
+    auto it = dicts->find(filename);
+    auto pending = (it != dicts->end()) ? it->second : nullptr;
+    dicts.unlock();
+
+    if (pending) {
+        // wait
+        pending->sem.acquire();
+
+        // erase and return
+        m_loadingDictionaries.lock()->erase(filename);
+        B_ASSERT(pending->dict);
+        return std::move(pending->dict);
+    }
+
+    // just load
+    return this->doLoadDictionary(filename);
+}
+
+std::unique_ptr<DS_Dictionary> LoadModule::doLoadDictionary(ZStringView filename) {
+    auto dict = std::make_unique<DS_Dictionary>();
+
+    if (dict->loadRootSubDictFromCompressedFile(filename.c_str(), true)) {
+        return dict;
+    }
+
+    auto stem = filename.view();
+    if (stem.ends_with(".dat")) {
+        stem.remove_suffix(4);
+    }
+
+    std::string secondary = fmt::format("{}2.dat", stem);
+    if (dict->loadRootSubDictFromCompressedFile(secondary.c_str(), true)) {
+        // overwrite the main file now
+        if (auto e = asp::fs::copy(secondary, filename.view()).err()) {
+            log::warn("failed to copy '{}' -> '{}'", secondary, filename, *e);
+        }
+
+        return dict;
+    }
+
+    std::string backup = fmt::format("{}.dat.bak", stem);
+    if (dict->loadRootSubDictFromCompressedFile(backup.c_str(), true)) {
+        return dict;
+    }
+
+    return nullptr;
+}
+
+$execute {
+    LoadModule::get().onPreEntry();
 }
 
 $on_game(Loaded) {

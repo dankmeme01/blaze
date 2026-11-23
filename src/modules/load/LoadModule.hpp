@@ -2,13 +2,21 @@
 #include <modules/Module.hpp>
 #include <asp/time.hpp>
 #include <AsyncLoad/Manager.hpp>
+#include <gtl/phmap.hpp>
+#include <semaphore>
 
 namespace blaze {
+
+struct LoadingDictionary {
+    std::unique_ptr<DS_Dictionary> dict;
+    std::counting_semaphore<> sem{0};
+};
 
 class LoadModule : public Module<LoadModule> {
 public:
     LoadModule();
 
+    void onPreEntry();
     void onEntry();
     void onLoadingLayerInit(bool reload);
     void onLoadingLayerInitPost();
@@ -21,12 +29,19 @@ public:
     void disableVsync();
     void restoreVsync();
 
+    /// Loads a DS_Dictionary* from a compressed xml file like `GManager::loadDataFromFile`.
+    /// If this file was not loaded or queued yet, simply replicates that function (including handling of 2.dat)
+    ///
+    /// If this file is already being loaded (was enqueued before), this blocks until the result is here.
+    std::unique_ptr<DS_Dictionary> loadDSDictionarySync(geode::ZStringView filename);
+
 private:
     asp::Instant m_processStartTime;
     asp::Instant m_entryTime;
     asp::Instant m_loadStartTime;
     asp::Instant m_loadFinishTime;
     asp::Instant m_menuLayerTime;
+    asp::Mutex<gtl::flat_hash_map<std::string, std::shared_ptr<LoadingDictionary>>> m_loadingDictionaries;
 
     void populateFpffCache();
 
@@ -38,6 +53,10 @@ private:
 
     [[nodiscard]] AsyncLoad::TaskHandle loadFont(geode::ZStringView name);
     void loadFont(AsyncLoad::TaskGroup& group, geode::ZStringView name);
+
+    void enqueueDSDictionaryLoad(std::string_view filename);
+
+    std::unique_ptr<DS_Dictionary> doLoadDictionary(geode::ZStringView filename);
 };
 
 }
