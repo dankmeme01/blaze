@@ -57,7 +57,7 @@ private:
 
     void enqueueDSDictionaryLoad(std::string_view filename);
 
-    std::unique_ptr<DS_Dictionary> doLoadDictionary(geode::ZStringView filename);
+    std::unique_ptr<DS_Dictionary> doLoadDictionary(const std::string& filename);
 };
 
 }

@@ -320,22 +320,31 @@ std::unique_ptr<DS_Dictionary> LoadModule::loadDSDictionarySync(ZStringView file
     return this->doLoadDictionary(filename);
 }
 
-std::unique_ptr<DS_Dictionary> LoadModule::doLoadDictionary(ZStringView filename) {
+static bool loadDictFromFile(DS_Dictionary* dict, const std::string& file) {
+#ifndef __APPLE__
+    return dict->loadRootSubDictFromCompressedFile(file.c_str(), true);
+#else
+    GManager dummy;
+    return dummy.tryLoadData(dict, file);
+#endif
+}
+
+std::unique_ptr<DS_Dictionary> LoadModule::doLoadDictionary(const std::string& filename) {
     auto dict = std::make_unique<DS_Dictionary>();
 
-    if (dict->loadRootSubDictFromCompressedFile(filename.c_str(), true)) {
+    if (loadDictFromFile(dict.get(), filename)) {
         return dict;
     }
 
-    auto stem = filename.view();
+    std::string_view stem = filename;
     if (stem.ends_with(".dat")) {
         stem.remove_suffix(4);
     }
 
     std::string secondary = fmt::format("{}2.dat", stem);
-    if (dict->loadRootSubDictFromCompressedFile(secondary.c_str(), true)) {
+    if (loadDictFromFile(dict.get(), secondary)) {
         // overwrite the main file now
-        if (auto e = asp::fs::copy(secondary, filename.view()).err()) {
+        if (auto e = asp::fs::copy(secondary, filename).err()) {
             log::warn("failed to copy '{}' -> '{}'", secondary, filename, *e);
         }
 
@@ -343,7 +352,7 @@ std::unique_ptr<DS_Dictionary> LoadModule::doLoadDictionary(ZStringView filename
     }
 
     std::string backup = fmt::format("{}.dat.bak", stem);
-    if (dict->loadRootSubDictFromCompressedFile(backup.c_str(), true)) {
+    if (loadDictFromFile(dict.get(), backup)) {
         return dict;
     }
 
