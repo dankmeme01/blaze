@@ -2,6 +2,7 @@
 #include <asp/fs.hpp>
 #include <asp/iter.hpp>
 #include <AsyncLoad/Manager.hpp>
+#include <AsyncLoad/TaskGroup.hpp>
 #include <AsyncLoad/FileUtils.hpp>
 
 using namespace geode::prelude;

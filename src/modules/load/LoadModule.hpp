@@ -2,6 +2,7 @@
 #include <modules/Module.hpp>
 #include <asp/time.hpp>
 #include <AsyncLoad/Manager.hpp>
+#include <AsyncLoad/TaskGroup.hpp>
 #include <gtl/phmap.hpp>
 #include <semaphore>
 

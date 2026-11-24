@@ -2,6 +2,7 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/modify/LoadingLayer.hpp>
+#include <AsyncLoad/TaskGroup.hpp>
 #include "LoadModule.hpp"
 
 namespace blaze {

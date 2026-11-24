@@ -25,3 +25,23 @@ using namespace geode::prelude;
 // }
 
 // Compress: 111.959ms, decompress: 42.992ms, match: true, compressed size: 9847970
+
+// #include <Geode/modify/AppDelegate.hpp>
+// #include <Geode/modify/CCEGLView.hpp>
+// class $modify(AppDelegate) {
+//     void setupGLView() {
+//         log::info("Pre setup");
+//         AppDelegate::setupGLView();
+//         log::info("Post setup");
+//         std::abort();
+//     }
+// };
+
+// class $modify(CCEGLView) {
+//     static cocos2d::CCEGLView* createWithRect(std::string const& p1, cocos2d::CCRect p2, float p3) {
+//         log::info("Pre createWithRect");
+//         auto ret = CCEGLView::createWithRect(p1, p2, p3);
+//         log::info("Post createWithRect");
+//         return ret;
+//     }
+// };
