@@ -60,7 +60,8 @@ CCString* CCString_createHook(const char* format, ...) {
 
 }
 
-#define CCSTRING_IOS_INIT_OFFSET 0x268bbc
+// To find: search xrefs to vsnprintf, the function that calls malloc(0x19000) and std::string::assign is it
+#define CCSTRING_IOS_INIT_OFFSET 0x306220
 
 $execute {
     void* initAddr = nullptr;
@@ -85,7 +86,7 @@ $execute {
     // tulip does not support var arg functions and macos has the init inlined :)
     return;
 #elif defined(GEODE_IS_IOS)
-    static_assert(GEODE_COMP_GD_VERSION == 22081, "Update function");
+    static_assert(GEODE_COMP_GD_VERSION == 22091, "Update function");
     // initWithFormatAndValist ios
     if (Loader::get()->isPatchless()) {
         auto hook = GEODE_MOD_STATIC_HOOK(CCSTRING_IOS_INIT_OFFSET, &blaze::CCString_initHook, cocos2d::CCString::initWithFormatAndValist);
