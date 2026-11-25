@@ -29,7 +29,7 @@ jobs:
         with:
           target: ${{ matrix.config.target }}
           upload: true
-          sdk: 'latest'
+          sdk: 'nightly'
           export-pdb: true
           build-config: ${{ matrix.config.target == 'win' && 'RelWithDebInfo' || 'Release' }}
 

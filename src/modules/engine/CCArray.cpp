@@ -2,23 +2,17 @@
 
 namespace blaze {
 
-static Ref<CCArray> createArray() {
-    auto arr = (CCArray*) operator new(sizeof(CCArray));
-    new (arr) CCObject();
-    arr->data = nullptr;
+static Ref<CCArray> createArray(size_t capacity = 1) {
+    auto arr = new CCArray(capacity);
     return Ref<CCArray>::adopt(arr);
 }
 
 Ref<CCArray> ArrayExt::create() {
-    auto ret = createArray();
-    ret->init();
-    return ret;
+    return createArray();
 }
 
 Ref<CCArray> ArrayExt::createWithCapacity(size_t capacity) {
-    auto ret = createArray();
-    ret->initWithCapacity(capacity);
-    return ret;
+    return createArray(capacity);
 }
 
 }
